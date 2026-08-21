@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-utils-pty"
+name = "unofficial-codex-utils-pty"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-pty)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lints]

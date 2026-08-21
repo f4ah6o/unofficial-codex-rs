@@ -1,5 +1,8 @@
 [package]
-name = "codex-utils-stream-parser"
+name = "unofficial-codex-utils-stream-parser"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-stream-parser)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

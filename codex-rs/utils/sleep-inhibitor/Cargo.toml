@@ -1,5 +1,8 @@
 [package]
-name = "codex-utils-sleep-inhibitor"
+name = "unofficial-codex-utils-sleep-inhibitor"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-sleep-inhibitor)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,5 +1,8 @@
 [package]
-name = "mcp_test_support"
+name = "unofficial-codex-mcp-test-support"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (mcp_test_support)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -30,5 +33,5 @@ tokio = { workspace = true, features = [
     "rt-multi-thread",
 ] }
 wiremock = { workspace = true }
-core_test_support = { path = "../../../core/tests/common" }
+core_test_support = { package = "unofficial-codex-core-test-support", path = "../../../core/tests/common" , version = "2026.8.0"}
 shlex = { workspace = true }

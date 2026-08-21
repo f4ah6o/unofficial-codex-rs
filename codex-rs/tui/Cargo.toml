@@ -1,5 +1,8 @@
 [package]
-name = "codex-tui"
+name = "unofficial-codex-tui"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-tui)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

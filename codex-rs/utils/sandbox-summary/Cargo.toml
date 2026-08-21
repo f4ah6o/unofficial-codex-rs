@@ -1,5 +1,8 @@
 [package]
-name = "codex-utils-sandbox-summary"
+name = "unofficial-codex-utils-sandbox-summary"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-sandbox-summary)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

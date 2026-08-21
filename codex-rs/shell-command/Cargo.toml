@@ -1,5 +1,8 @@
 [package]
-name = "codex-shell-command"
+name = "unofficial-codex-shell-command"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-shell-command)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

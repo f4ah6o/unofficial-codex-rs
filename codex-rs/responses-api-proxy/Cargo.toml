@@ -1,5 +1,8 @@
 [package]
-name = "codex-responses-api-proxy"
+name = "unofficial-codex-responses-api-proxy"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-responses-api-proxy)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

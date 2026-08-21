@@ -1,5 +1,8 @@
 [package]
-name = "codex-terminal-detection"
+name = "unofficial-codex-terminal-detection"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-terminal-detection)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

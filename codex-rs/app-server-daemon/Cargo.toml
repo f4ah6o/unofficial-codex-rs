@@ -1,5 +1,8 @@
 [package]
-name = "codex-app-server-daemon"
+name = "unofficial-codex-app-server-daemon"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-app-server-daemon)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,0 +1,40 @@
+name: Check crates.io packaging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "codex-rs/**"
+      - "scripts/**"
+      - "DOWNSTREAM_VERSION"
+      - "UPSTREAM_REVISION"
+  pull_request:
+    paths:
+      - "codex-rs/**"
+      - "scripts/**"
+      - "DOWNSTREAM_VERSION"
+      - "UPSTREAM_REVISION"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Check namespace and dependency guardrails
+        run: python3 scripts/check-cratesio-ready.py
+
+      - name: Resolve workspace metadata
+        run: cargo metadata --manifest-path codex-rs/Cargo.toml --locked --no-deps --format-version 1
+
+      - name: Check publish dependency order
+        run: python3 scripts/publish-workspace.py --plan
+
+      - name: Compile the workspace from the locked graph
+        run: cargo check --manifest-path codex-rs/Cargo.toml --workspace --locked --all-targets

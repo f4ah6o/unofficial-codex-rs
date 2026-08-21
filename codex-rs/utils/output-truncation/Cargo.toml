@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-utils-output-truncation"
+name = "unofficial-codex-utils-output-truncation"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-output-truncation)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lints]

@@ -1,5 +1,8 @@
 [package]
-name = "codex-v8-poc"
+name = "unofficial-codex-v8-poc"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-v8-poc)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

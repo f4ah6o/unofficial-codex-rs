@@ -1,5 +1,8 @@
 [package]
-name = "codex-utils-approval-presets"
+name = "unofficial-codex-utils-approval-presets"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-approval-presets)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

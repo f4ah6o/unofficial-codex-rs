@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-collaboration-mode-templates"
+name = "unofficial-codex-collaboration-mode-templates"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-collaboration-mode-templates)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]

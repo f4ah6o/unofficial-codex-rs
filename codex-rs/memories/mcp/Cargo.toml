@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-memories-mcp"
+name = "unofficial-codex-memories-mcp"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-memories-mcp)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]

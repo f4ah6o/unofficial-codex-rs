@@ -1,9 +1,11 @@
 [package]
-name = "codex-backend-client"
+name = "unofficial-codex-backend-client"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-backend-client)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-publish = false
+publish = true
 
 [lib]
 path = "src/lib.rs"
@@ -17,7 +19,7 @@ anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-codex-backend-openapi-models = { path = "../codex-backend-openapi-models" }
+codex-backend-openapi-models = { package = "unofficial-codex-backend-openapi-models", path = "../codex-backend-openapi-models" , version = "2026.8.0"}
 codex-api = { workspace = true }
 codex-client = { workspace = true }
 codex-login = { workspace = true }

@@ -1,5 +1,8 @@
 [package]
-name = "codex-external-agent-sessions"
+name = "unofficial-codex-external-agent-sessions"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-external-agent-sessions)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

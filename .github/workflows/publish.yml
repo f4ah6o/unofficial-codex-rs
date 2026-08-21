@@ -1,0 +1,27 @@
+name: Publish unofficial Codex crates
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "unofficial-codex-v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Authenticate with crates.io Trusted Publishing
+        uses: rust-lang/crates-io-auth-action@v1
+        id: crates-io-auth
+
+      - name: Publish the workspace in dependency order
+        run: python3 scripts/publish-workspace.py

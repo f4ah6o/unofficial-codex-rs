@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-windows-sandbox"
+name = "unofficial-codex-windows-sandbox"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-windows-sandbox)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]
@@ -45,9 +48,9 @@ windows = { version = "0.58", features = [
 ] }
 
 [dependencies.codex-protocol]
-package = "codex-protocol"
+package = "unofficial-codex-protocol"
 path = "../protocol"
-
+version = "2026.8.0"
 [dependencies.rand]
 default-features = false
 features = ["std", "small_rng"]

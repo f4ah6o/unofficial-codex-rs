@@ -1,5 +1,8 @@
 [package]
-name = "codex-rmcp-client"
+name = "unofficial-codex-rmcp-client"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-rmcp-client)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

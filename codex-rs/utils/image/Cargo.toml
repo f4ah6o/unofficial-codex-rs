@@ -1,5 +1,8 @@
 [package]
-name = "codex-utils-image"
+name = "unofficial-codex-utils-image"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-image)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,5 +1,8 @@
 [package]
-name = "codex-experimental-api-macros"
+name = "unofficial-codex-experimental-api-macros"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-experimental-api-macros)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

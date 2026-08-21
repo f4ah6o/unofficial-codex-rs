@@ -1,5 +1,8 @@
 [package]
-name = "codex-utils-json-to-toml"
+name = "unofficial-codex-utils-json-to-toml"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-json-to-toml)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

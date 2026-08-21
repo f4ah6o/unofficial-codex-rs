@@ -1,5 +1,8 @@
 [package]
-name = "codex-network-proxy"
+name = "unofficial-codex-network-proxy"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-network-proxy)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 edition.workspace = true
 version.workspace = true
 license.workspace = true

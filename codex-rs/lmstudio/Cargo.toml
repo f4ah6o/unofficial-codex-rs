@@ -1,5 +1,8 @@
 [package]
-name = "codex-lmstudio"
+name = "unofficial-codex-lmstudio"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-lmstudio)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,8 +14,8 @@ doctest = false
 
 
 [dependencies]
-codex-core = { path = "../core" }
-codex-model-provider-info = { path = "../model-provider-info" }
+codex-core = { package = "unofficial-codex-core", path = "../core" , version = "2026.8.0"}
+codex-model-provider-info = { package = "unofficial-codex-model-provider-info", path = "../model-provider-info" , version = "2026.8.0"}
 reqwest = { version = "0.12", features = ["json", "stream"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt"] }

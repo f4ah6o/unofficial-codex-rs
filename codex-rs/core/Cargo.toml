@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-core"
+name = "unofficial-codex-core"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-core)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]
@@ -72,7 +75,7 @@ codex-utils-pty = { workspace = true }
 codex-utils-string = { workspace = true }
 codex-utils-stream-parser = { workspace = true }
 codex-utils-template = { workspace = true }
-codex-windows-sandbox = { package = "codex-windows-sandbox", path = "../windows-sandbox-rs" }
+codex-windows-sandbox = { package = "unofficial-codex-windows-sandbox", path = "../windows-sandbox-rs" , version = "2026.8.0"}
 csv = { workspace = true }
 dirs = { workspace = true }
 dunce = { workspace = true }
