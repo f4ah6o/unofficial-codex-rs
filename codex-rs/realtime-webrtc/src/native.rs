@@ -134,7 +134,12 @@ fn worker_main(
 }
 
 async fn create_peer_connection_and_offer() -> Result<(PeerConnection, String)> {
-    let factory = PeerConnectionFactory::with_platform_adm();
+    let factory = PeerConnectionFactory::default();
+    if !factory.acquire_platform_adm() {
+        return Err(RealtimeWebrtcError::Message(
+            "failed to acquire the platform audio device module".into(),
+        ));
+    }
     let peer_connection = factory
         .create_peer_connection(RtcConfiguration::default())
         .map_err(|err| message_error("failed to create WebRTC peer connection", err))?;
@@ -149,8 +154,7 @@ async fn create_peer_connection_and_offer() -> Result<(PeerConnection, String)> 
             },
         )
         .map_err(|err| message_error("failed to add audio transceiver", err))?;
-    let local_audio_source = factory.create_audio_source();
-    let local_audio_track = factory.create_audio_track("realtime-mic", local_audio_source);
+    let local_audio_track = factory.create_device_audio_track("realtime-mic");
     audio_transceiver
         .sender()
         .set_track(Some(local_audio_track.into()))

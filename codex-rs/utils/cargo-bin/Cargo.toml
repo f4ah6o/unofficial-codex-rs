@@ -10,9 +10,13 @@ license.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+bazel = ["dep:runfiles"]
+
 [dependencies]
 assert_cmd = { workspace = true }
-runfiles = { workspace = true }
+runfiles = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
 [lib]
