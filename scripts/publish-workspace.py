@@ -113,6 +113,7 @@ def main() -> int:
         print("Skipped packages after one failed attempt:", flush=True)
         for name in skipped:
             print(f"  - {name}", flush=True)
+        return 1
     return 0
 
 
