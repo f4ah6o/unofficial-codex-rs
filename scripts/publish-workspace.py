@@ -11,13 +11,10 @@ import argparse
 import json
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "codex-rs" / "Cargo.toml"
-RETRY_SECONDS = 30
-MAX_RETRIES = 10
 
 
 def metadata() -> dict:
@@ -71,7 +68,7 @@ def publish_order(data: dict) -> list[dict]:
     return [packages[package_id] for package_id in ordered]
 
 
-def publish(package: dict) -> None:
+def publish(package: dict) -> bool:
     name = package["name"]
     command = [
         "cargo",
@@ -82,20 +79,17 @@ def publish(package: dict) -> None:
         name,
         "--locked",
     ]
-    for attempt in range(1, MAX_RETRIES + 1):
-        print(f"Publishing {name} (attempt {attempt}/{MAX_RETRIES})", flush=True)
-        result = subprocess.run(command, text=True, capture_output=True)
-        combined = (result.stdout + "\n" + result.stderr).strip()
-        print(combined, flush=True)
-        if result.returncode == 0:
-            return
-        if "already exists" in combined:
-            print(f"{name} already exists; continuing for rerun safety.", flush=True)
-            return
-        if attempt == MAX_RETRIES:
-            raise SystemExit(f"publishing {name} failed")
-        print(f"Waiting {RETRY_SECONDS}s for crates.io index propagation.", flush=True)
-        time.sleep(RETRY_SECONDS)
+    print(f"Publishing {name} (single attempt)", flush=True)
+    result = subprocess.run(command, text=True, capture_output=True)
+    combined = (result.stdout + "\n" + result.stderr).strip()
+    print(combined, flush=True)
+    if result.returncode == 0:
+        return True
+    if "already exists" in combined:
+        print(f"{name} already exists; continuing for rerun safety.", flush=True)
+        return True
+    print(f"{name} failed once; skipping it and continuing.", flush=True)
+    return False
 
 
 def main() -> int:
@@ -111,8 +105,14 @@ def main() -> int:
         return 0
 
     print(f"Publishing {len(packages)} local Cargo packages.", flush=True)
+    skipped: list[str] = []
     for package in packages:
-        publish(package)
+        if not publish(package):
+            skipped.append(package["name"])
+    if skipped:
+        print("Skipped packages after one failed attempt:", flush=True)
+        for name in skipped:
+            print(f"  - {name}", flush=True)
     return 0
 
 
