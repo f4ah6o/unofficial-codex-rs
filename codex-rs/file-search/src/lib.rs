@@ -487,6 +487,7 @@ fn matcher_worker(
 ) -> anyhow::Result<()> {
     const TICK_TIMEOUT_MS: u64 = 10;
     let config = Config::DEFAULT.match_paths();
+    let mut scores_matcher = Matcher::new(config.clone());
     let mut indices_matcher = inner.compute_indices.then(|| Matcher::new(config.clone()));
     let cancel_requested = || inner.cancelled.load(Ordering::Relaxed);
     let shutdown_requested = || inner.shutdown.load(Ordering::Relaxed);
@@ -542,13 +543,13 @@ fn matcher_worker(
                     let limit = inner.limit.min(snapshot.matched_item_count() as usize);
                     let pattern = snapshot.pattern().column_pattern(0);
                     let matches: Vec<_> = snapshot
-                        .matches()
-                        .iter()
-                        .take(limit)
-                        .filter_map(|match_| {
-                            let item = snapshot.get_item(match_.idx)?;
+                        .matched_items(0..limit as u32)
+                        .filter_map(|item| {
                             let full_path = item.data.as_ref();
                             let (root_idx, relative_path) = get_file_path(Path::new(full_path), &inner.search_directories)?;
+                            let score = pattern
+                                .score(item.matcher_columns[0].slice(..), &mut scores_matcher)
+                                .unwrap_or_default() as u32;
                             let indices = if let Some(indices_matcher) = indices_matcher.as_mut() {
                                 let mut idx_vec = Vec::<u32>::new();
                                 let haystack = item.matcher_columns[0].slice(..);
@@ -565,7 +566,7 @@ fn matcher_worker(
                                 MatchType::File
                             };
                             Some(FileMatch {
-                                score: match_.score,
+                                score,
                                 path: PathBuf::from(relative_path),
                                 match_type,
                                 root: inner.search_directories[root_idx].clone(),
