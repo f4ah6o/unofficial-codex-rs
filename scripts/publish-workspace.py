@@ -22,6 +22,7 @@ LOCKFILE = ROOT / "codex-rs" / "Cargo.lock"
 # uploaded manifest. The workspace files are restored immediately afterwards.
 PUBLISH_WITHOUT_DEV_DEPENDENCIES = {
     "unofficial-codex-exec-server",
+    "unofficial-codex-linux-sandbox",
     "unofficial-codex-login",
     "unofficial-codex-core",
     "unofficial-codex-mcp-server",
