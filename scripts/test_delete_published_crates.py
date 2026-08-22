@@ -141,6 +141,60 @@ class PublishProcessDetectionTest(unittest.TestCase):
         )
 
 
+class DependencyPassDeletionTest(unittest.TestCase):
+    def test_retries_reverse_dependency_blocks_on_the_next_pass(self) -> None:
+        class FakeClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+                self.git_utils_attempts = 0
+
+            def delete_crate(self, name: str, message: str) -> str:
+                self.calls.append(name)
+                if name == "unofficial-codex-git-utils":
+                    self.git_utils_attempts += 1
+                    if self.git_utils_attempts == 1:
+                        raise MODULE.ReverseDependenciesRemain(
+                            "unofficial-codex-state depends on this crate"
+                        )
+                return "deleted"
+
+        client = FakeClient()
+        completed = MODULE.delete_in_dependency_passes(
+            client,
+            [
+                "unofficial-codex-git-utils",
+                "unofficial-codex-state",
+                "unofficial-codex-base",
+            ],
+            "cleanup",
+        )
+
+        self.assertEqual(completed, 3)
+        self.assertEqual(
+            client.calls,
+            [
+                "unofficial-codex-git-utils",
+                "unofficial-codex-state",
+                "unofficial-codex-base",
+                "unofficial-codex-git-utils",
+            ],
+        )
+
+    def test_stops_when_a_pass_makes_no_progress(self) -> None:
+        class BlockedClient:
+            def delete_crate(self, name: str, message: str) -> str:
+                raise MODULE.ReverseDependenciesRemain(
+                    "external crate depends on this crate"
+                )
+
+        with self.assertRaisesRegex(MODULE.CleanupError, "no deletion progress"):
+            MODULE.delete_in_dependency_passes(
+                BlockedClient(),
+                ["unofficial-codex-base"],
+                "cleanup",
+            )
+
+
 class ErrorDetailTest(unittest.TestCase):
     def test_extracts_crates_io_error_details(self) -> None:
         payload = b'{"errors":[{"detail":"reverse dependency exists"}]}'

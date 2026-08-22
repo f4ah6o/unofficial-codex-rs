@@ -49,6 +49,10 @@ class CleanupError(RuntimeError):
     """A safe, user-facing cleanup failure."""
 
 
+class ReverseDependenciesRemain(CleanupError):
+    """Deletion is temporarily blocked by another target crate."""
+
+
 @dataclass(frozen=True)
 class ApiResult:
     status: int
@@ -156,12 +160,18 @@ class CratesIoClient:
     def delete_crate(self, name: str, message: str) -> str:
         encoded_name = urllib.parse.quote(name, safe="")
         query = urllib.parse.urlencode({"message": message})
+        path = f"/api/v1/crates/{encoded_name}?{query}"
         result = self.request(
             "DELETE",
-            f"/api/v1/crates/{encoded_name}?{query}",
+            path,
             authenticate=True,
-            accepted_statuses=frozenset({204, 404}),
+            accepted_statuses=frozenset({204, 404, 422}),
         )
+        if result.status == 422:
+            detail = _api_error_detail(result.payload)
+            if "only crates without reverse dependencies can be deleted" in detail:
+                raise ReverseDependenciesRemain(detail)
+            raise CleanupError(f"DELETE {path} failed with HTTP 422: {detail}")
         return "deleted" if result.status == 204 else "already absent"
 
 
@@ -354,6 +364,60 @@ def deletion_plan(
     return [name for name in reversed(publish_plan) if name in published]
 
 
+def delete_in_dependency_passes(
+    client: CratesIoClient,
+    targets: list[str],
+    message: str,
+) -> int:
+    """Delete each target once per pass, retrying reverse-dependency blocks."""
+
+    pending = list(targets)
+    total = len(pending)
+    completed = 0
+    pass_number = 1
+
+    while pending:
+        print(
+            f"pass {pass_number}: attempting {len(pending)} crate(s)",
+            flush=True,
+        )
+        blocked: list[tuple[str, str]] = []
+        completed_before_pass = completed
+
+        for name in pending:
+            try:
+                outcome = client.delete_crate(name, message)
+            except ReverseDependenciesRemain as error:
+                blocked.append((name, str(error)))
+                print(f"deferred: {name}: {error}", flush=True)
+                continue
+
+            completed += 1
+            print(f"{completed:>3}/{total} {outcome}: {name}", flush=True)
+
+        if not blocked:
+            return completed
+
+        if completed == completed_before_pass:
+            details = "\n".join(
+                f"  {name}: {detail}" for name, detail in blocked
+            )
+            raise CleanupError(
+                "no deletion progress; unresolved reverse dependencies remain:\n"
+                + details
+            )
+
+        print(
+            f"pass {pass_number}: deferred {len(blocked)} crate(s) "
+            "until the next pass",
+            flush=True,
+        )
+        pending = [name for name, _ in blocked]
+        pass_number += 1
+
+    return completed
+
+
 def read_session_cookie() -> str:
     value = os.environ.pop(SESSION_ENV, None)
     if value is None:
@@ -438,12 +502,11 @@ def main() -> int:
             session_cookie=cookie,
             limiter=limiter,
         )
-        for index, name in enumerate(targets, start=1):
-            outcome = delete_client.delete_crate(name, args.message)
-            print(
-                f"{index:>3}/{len(targets)} {outcome}: {name}",
-                flush=True,
-            )
+        completed = delete_in_dependency_passes(
+            delete_client,
+            targets,
+            args.message,
+        )
 
         remaining = discover_published_crates(CratesIoClient(limiter=limiter))
         remaining_targets = sorted(set(remaining) & set(publish_plan))
@@ -453,7 +516,7 @@ def main() -> int:
                 + ", ".join(remaining_targets)
             )
 
-        print(f"completed: deleted {len(targets)} crates", flush=True)
+        print(f"completed: removed {completed} crate(s)", flush=True)
         return 0
     except (CleanupError, subprocess.CalledProcessError) as error:
         print(f"error: {error}", file=sys.stderr, flush=True)
