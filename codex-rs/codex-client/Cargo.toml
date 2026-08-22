@@ -40,4 +40,5 @@ tempfile = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 [lib]
+name = "codex_client"
 doctest = false
