@@ -10,11 +10,23 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "codex-rs" / "Cargo.toml"
+LOCKFILE = ROOT / "codex-rs" / "Cargo.lock"
+
+# These packages participate in test-only dependency cycles. Cargo still
+# resolves dev-dependencies while preparing a publish, so publish these
+# bootstrap packages with their dev-dependency sections omitted from the
+# uploaded manifest. The workspace files are restored immediately afterwards.
+PUBLISH_WITHOUT_DEV_DEPENDENCIES = {
+    "unofficial-codex-exec-server",
+    "unofficial-codex-login",
+    "unofficial-codex-core",
+    "unofficial-codex-mcp-server",
+    "unofficial-codex-tui",
+}
 
 
 def metadata() -> dict:
@@ -68,8 +80,42 @@ def publish_order(data: dict) -> list[dict]:
     return [packages[package_id] for package_id in ordered]
 
 
+def without_dev_dependencies(manifest_path: Path) -> str:
+    original = manifest_path.read_text(encoding="utf-8")
+    lines = original.splitlines(keepends=True)
+    stripped: list[str] = []
+    skipping = False
+
+    for line in lines:
+        header = line.strip()
+        if header.startswith("[") and header.endswith("]"):
+            skipping = header == "[dev-dependencies]" or (
+                header.startswith("[target.") and header.endswith(".dev-dependencies]")
+            )
+        if not skipping:
+            stripped.append(line)
+
+    manifest_path.write_text("".join(stripped), encoding="utf-8")
+    return original
+
+
 def publish(package: dict) -> bool:
     name = package["name"]
+    strip_dev_dependencies = name in PUBLISH_WITHOUT_DEV_DEPENDENCIES
+    manifest_path = Path(package["manifest_path"])
+    restore_manifest = None
+    restore_lock = None
+
+    if strip_dev_dependencies:
+        print(
+            f"Publishing {name} with dev-dependencies temporarily omitted "
+            "for registry bootstrap.",
+            flush=True,
+        )
+        restore_manifest = without_dev_dependencies(manifest_path)
+        if LOCKFILE.exists():
+            restore_lock = LOCKFILE.read_text(encoding="utf-8")
+
     command = [
         "cargo",
         "publish",
@@ -77,19 +123,33 @@ def publish(package: dict) -> bool:
         str(MANIFEST),
         "--package",
         name,
-        "--locked",
     ]
-    print(f"Publishing {name} (single attempt)", flush=True)
-    result = subprocess.run(command, text=True, capture_output=True)
-    combined = (result.stdout + "\n" + result.stderr).strip()
-    print(combined, flush=True)
-    if result.returncode == 0:
-        return True
-    if "already exists" in combined:
-        print(f"{name} already exists; continuing for rerun safety.", flush=True)
-        return True
-    print(f"{name} failed once; skipping it and continuing.", flush=True)
-    return False
+    if strip_dev_dependencies:
+        # Removing dev-dependencies changes the workspace lock resolution.
+        # Let Cargo update it during the temporary publish, then restore it.
+        command.append("--allow-dirty")
+    else:
+        command.append("--locked")
+
+    try:
+        print(f"Publishing {name} (single attempt)", flush=True)
+        result = subprocess.run(command, text=True, capture_output=True)
+        combined = (result.stdout + "\n" + result.stderr).strip()
+        print(combined, flush=True)
+        if result.returncode == 0:
+            return True
+        if "already exists" in combined:
+            print(f"{name} already exists; continuing for rerun safety.", flush=True)
+            return True
+        print(f"{name} failed once; skipping it and continuing.", flush=True)
+        return False
+    finally:
+        if restore_manifest is not None:
+            manifest_path.write_text(restore_manifest, encoding="utf-8")
+            print(f"Restored {manifest_path}", flush=True)
+        if restore_lock is not None:
+            LOCKFILE.write_text(restore_lock, encoding="utf-8")
+            print(f"Restored {LOCKFILE}", flush=True)
 
 
 def main() -> int:
