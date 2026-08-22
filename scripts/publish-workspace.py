@@ -100,7 +100,7 @@ def without_dev_dependencies(manifest_path: Path) -> str:
     return original
 
 
-def publish(package: dict) -> bool:
+def publish(package: dict, *, dry_run: bool) -> bool:
     name = package["name"]
     strip_dev_dependencies = name in PUBLISH_WITHOUT_DEV_DEPENDENCIES
     manifest_path = Path(package["manifest_path"])
@@ -125,6 +125,8 @@ def publish(package: dict) -> bool:
         "--package",
         name,
     ]
+    if dry_run:
+        command.append("--dry-run")
     if strip_dev_dependencies:
         # Removing dev-dependencies changes the workspace lock resolution.
         # Let Cargo update it during the temporary publish, then restore it.
@@ -133,7 +135,8 @@ def publish(package: dict) -> bool:
         command.append("--locked")
 
     try:
-        print(f"Publishing {name} (single attempt)", flush=True)
+        mode = "dry run" if dry_run else "single attempt"
+        print(f"Publishing {name} ({mode})", flush=True)
         result = subprocess.run(command, text=True, capture_output=True)
         combined = (result.stdout + "\n" + result.stderr).strip()
         print(combined, flush=True)
@@ -156,19 +159,40 @@ def publish(package: dict) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--plan", action="store_true")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="package and verify every selected crate without uploading",
+    )
+    parser.add_argument(
+        "--package",
+        dest="selected_packages",
+        action="append",
+        metavar="NAME",
+        help="select one or more packages while preserving dependency order",
+    )
     args = parser.parse_args()
 
     data = metadata()
     packages = publish_order(data)
+    if args.selected_packages:
+        all_names = {package["name"] for package in packages}
+        unknown = sorted(set(args.selected_packages) - all_names)
+        if unknown:
+            raise SystemExit(f"unknown local Cargo packages: {unknown}")
+        selected = set(args.selected_packages)
+        packages = [package for package in packages if package["name"] in selected]
+
     if args.plan:
         for package in packages:
             print(package["name"])
         return 0
 
-    print(f"Publishing {len(packages)} local Cargo packages.", flush=True)
+    mode = "dry run" if args.dry_run else "publish"
+    print(f"{mode}: processing {len(packages)} local Cargo packages.", flush=True)
     skipped: list[str] = []
     for package in packages:
-        if not publish(package):
+        if not publish(package, dry_run=args.dry_run):
             skipped.append(package["name"])
     if skipped:
         print("Skipped packages after one failed attempt:", flush=True)
