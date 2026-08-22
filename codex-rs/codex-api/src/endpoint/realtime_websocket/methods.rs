@@ -42,7 +42,7 @@ use tracing::error;
 use tracing::info;
 use tracing::trace;
 use tracing::warn;
-use tungstenite::protocol::WebSocketConfig;
+use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use url::Url;
 
 const REALTIME_WIRE_LOG_TARGET: &str = "codex_api::realtime_websocket::wire";

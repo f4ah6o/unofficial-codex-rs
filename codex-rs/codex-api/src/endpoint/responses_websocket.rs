@@ -43,9 +43,7 @@ use tracing::error;
 use tracing::info;
 use tracing::instrument;
 use tracing::trace;
-use tungstenite::extensions::ExtensionsConfig;
-use tungstenite::extensions::compression::deflate::DeflateConfig;
-use tungstenite::protocol::WebSocketConfig;
+use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use url::Url;
 
 struct WsStream {
@@ -540,12 +538,7 @@ async fn connect_websocket(
 }
 
 fn websocket_config() -> WebSocketConfig {
-    let mut extensions = ExtensionsConfig::default();
-    extensions.permessage_deflate = Some(DeflateConfig::default());
-
-    let mut config = WebSocketConfig::default();
-    config.extensions = extensions;
-    config
+    WebSocketConfig::default()
 }
 
 fn map_ws_error(err: WsError, url: &Url) -> ApiError {
@@ -818,12 +811,6 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
     use serde_json::json;
-
-    #[test]
-    fn websocket_config_enables_permessage_deflate() {
-        let config = websocket_config();
-        assert!(config.extensions.permessage_deflate.is_some());
-    }
 
     #[test]
     fn parse_wrapped_websocket_error_event_maps_to_transport_http() {
