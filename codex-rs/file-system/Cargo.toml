@@ -17,5 +17,6 @@ codex-utils-absolute-path = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [lib]
+name = "codex_file_system"
 test = false
 doctest = false

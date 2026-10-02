@@ -19,4 +19,5 @@ tokio = { workspace = true, features = ["sync", "rt", "rt-multi-thread"] }
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 
 [lib]
+name = "codex_utils_cache"
 doctest = false

@@ -17,4 +17,5 @@ codex-model-provider-info = { workspace = true }
 codex-ollama = { workspace = true }
 
 [lib]
+name = "codex_utils_oss"
 doctest = false

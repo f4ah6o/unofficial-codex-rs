@@ -19,4 +19,5 @@ tokio-util.workspace = true
 pretty_assertions.workspace = true
 
 [lib]
+name = "codex_async_utils"
 doctest = false

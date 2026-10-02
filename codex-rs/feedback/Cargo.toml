@@ -22,4 +22,5 @@ tracing-subscriber = { workspace = true }
 pretty_assertions = { workspace = true }
 
 [lib]
+name = "codex_feedback"
 doctest = false

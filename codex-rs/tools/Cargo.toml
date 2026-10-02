@@ -35,4 +35,5 @@ tracing = { workspace = true }
 pretty_assertions = { workspace = true }
 
 [lib]
+name = "codex_tools"
 doctest = false

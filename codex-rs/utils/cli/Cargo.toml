@@ -21,4 +21,5 @@ toml = { workspace = true }
 pretty_assertions = { workspace = true }
 
 [lib]
+name = "codex_utils_cli"
 doctest = false

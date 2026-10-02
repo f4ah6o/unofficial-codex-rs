@@ -27,7 +27,7 @@ permissions:
 jobs:
   package:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       CARGO_PROFILE_DEV_DEBUG: "0"
       CARGO_PROFILE_TEST_DEBUG: "0"
@@ -64,8 +64,12 @@ jobs:
       - name: Check publish dependency order
         run: python3 scripts/publish-workspace.py --plan
 
+      - name: Compile the workspace from the locked graph
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/locked-workspace-target
+        run: |
+          cargo check --manifest-path codex-rs/Cargo.toml --workspace --locked --all-targets
+          rm -rf "$CARGO_TARGET_DIR"
+
       - name: Verify packaged artifacts without uploading
         run: python3 scripts/publish-workspace.py --dry-run
-
-      - name: Compile the workspace from the locked graph
-        run: cargo check --manifest-path codex-rs/Cargo.toml --workspace --locked --all-targets

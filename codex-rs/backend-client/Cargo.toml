@@ -8,6 +8,7 @@ license.workspace = true
 publish = true
 
 [lib]
+name = "codex_backend_client"
 path = "src/lib.rs"
 doctest = false
 

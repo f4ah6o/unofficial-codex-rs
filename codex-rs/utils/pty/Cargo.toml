@@ -37,4 +37,5 @@ winapi = { version = "0.3.9", features = [
 libc = { workspace = true }
 
 [lib]
+name = "codex_utils_pty"
 doctest = false

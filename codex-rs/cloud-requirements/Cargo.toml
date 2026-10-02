@@ -36,4 +36,5 @@ tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt", "test-util", "time"] }
 
 [lib]
+name = "codex_cloud_requirements"
 doctest = false

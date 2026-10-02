@@ -14,5 +14,6 @@ workspace = true
 codex-protocol = { workspace = true }
 
 [lib]
+name = "codex_utils_approval_presets"
 test = false
 doctest = false

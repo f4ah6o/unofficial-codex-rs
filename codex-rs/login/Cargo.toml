@@ -57,4 +57,5 @@ tempfile = { workspace = true }
 wiremock = { workspace = true }
 
 [lib]
+name = "codex_login"
 doctest = false

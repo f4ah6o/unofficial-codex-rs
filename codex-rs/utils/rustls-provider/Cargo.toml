@@ -14,5 +14,6 @@ workspace = true
 rustls = { workspace = true }
 
 [lib]
+name = "codex_utils_rustls_provider"
 test = false
 doctest = false

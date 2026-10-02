@@ -18,4 +18,5 @@ codex-utils-string = { workspace = true }
 pretty_assertions = { workspace = true }
 
 [lib]
+name = "codex_utils_output_truncation"
 doctest = false

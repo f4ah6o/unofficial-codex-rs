@@ -11,4 +11,5 @@ license.workspace = true
 workspace = true
 
 [lib]
+name = "codex_utils_elapsed"
 doctest = false

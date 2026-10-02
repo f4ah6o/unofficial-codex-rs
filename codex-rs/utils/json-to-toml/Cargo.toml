@@ -18,4 +18,5 @@ pretty_assertions = { workspace = true }
 workspace = true
 
 [lib]
+name = "codex_utils_json_to_toml"
 doctest = false

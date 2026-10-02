@@ -28,4 +28,5 @@ windows-sys = { version = "0.61.2", features = [
 ] }
 
 [lib]
+name = "codex_utils_sleep_inhibitor"
 doctest = false

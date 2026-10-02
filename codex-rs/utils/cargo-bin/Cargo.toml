@@ -20,5 +20,6 @@ runfiles = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
 [lib]
+name = "codex_utils_cargo_bin"
 test = false
 doctest = false

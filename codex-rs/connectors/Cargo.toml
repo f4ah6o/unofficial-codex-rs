@@ -25,4 +25,5 @@ tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [lib]
+name = "codex_connectors"
 doctest = false

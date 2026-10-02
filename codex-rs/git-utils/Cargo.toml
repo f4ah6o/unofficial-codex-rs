@@ -38,4 +38,5 @@ walkdir = { workspace = true }
 pretty_assertions = { workspace = true }
 
 [lib]
+name = "codex_git_utils"
 doctest = false
