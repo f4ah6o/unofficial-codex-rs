@@ -9,7 +9,7 @@
  opentelemetry = "0.31.0"
  opentelemetry-appender-tracing = "0.31.0"
  opentelemetry-otlp = "0.31.0"
-@@ -404,7 +403,7 @@
+@@ -403,15 +403,15 @@
  tree-sitter = "0.25.10"
  tree-sitter-bash = "0.25"
  ts-rs = "11"
@@ -17,11 +17,23 @@
 +tungstenite = { version = "0.28.0" }
  uds_windows = "1.1.0"
  unicode-segmentation = "1.12.0"
- unicode-width = "0.2"
-@@ -514,11 +513,6 @@
+-unicode-width = "0.2"
++unicode-width = "=0.2.0"
+ url = "2"
+ urlencoding = "2.1"
+ uuid = "1"
+ v8 = "=147.4.0"
+-vt100 = "0.16.2"
++vt100 = "0.15.2"
+ walkdir = "2.5.0"
+ webbrowser = "1.0"
+ which = "8"
+@@ -511,13 +511,6 @@
+ [patch.crates-io]
+ # Uncomment to debug local changes.
  # ratatui = { path = "../../ratatui" }
- crossterm = { git = "https://github.com/nornagon/crossterm", rev = "87db8bfa6dc99427fd3b071681b07fc31c6ce995" }
- ratatui = { git = "https://github.com/nornagon/ratatui", rev = "9b2ad1298408c45918ee9f8241a6f95498cdbed2" }
+-crossterm = { git = "https://github.com/nornagon/crossterm", rev = "87db8bfa6dc99427fd3b071681b07fc31c6ce995" }
+-ratatui = { git = "https://github.com/nornagon/ratatui", rev = "9b2ad1298408c45918ee9f8241a6f95498cdbed2" }
 -tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "132f5b39c862e3a970f731d709608b3e6276d5f6" }
 -tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "9200079d3b54a1ff51072e24d81fd354f085156f" }
  
@@ -44,25 +56,37 @@
  regex-lite = { workspace = true }
 --- a/codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs
 +++ b/codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs
-@@ -42,7 +42,7 @@
+@@ -37,12 +37,12 @@
+ use tokio_tungstenite::tungstenite::Error as WsError;
+ use tokio_tungstenite::tungstenite::Message;
+ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
++use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
+ use tracing::debug;
+ use tracing::error;
  use tracing::info;
  use tracing::trace;
  use tracing::warn;
 -use tungstenite::protocol::WebSocketConfig;
-+use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
  use url::Url;
  
  const REALTIME_WIRE_LOG_TARGET: &str = "codex_api::realtime_websocket::wire";
 --- a/codex-rs/codex-api/src/endpoint/responses_websocket.rs
 +++ b/codex-rs/codex-api/src/endpoint/responses_websocket.rs
-@@ -43,9 +43,7 @@
+@@ -36,6 +36,7 @@
+ use tokio_tungstenite::tungstenite::Message;
+ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+ use tokio_tungstenite::tungstenite::protocol::CloseFrame;
++use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
+ use tracing::Instrument;
+ use tracing::Span;
+ use tracing::debug;
+@@ -43,9 +44,6 @@
  use tracing::info;
  use tracing::instrument;
  use tracing::trace;
 -use tungstenite::extensions::ExtensionsConfig;
 -use tungstenite::extensions::compression::deflate::DeflateConfig;
 -use tungstenite::protocol::WebSocketConfig;
-+use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
  use url::Url;
  
  struct WsStream {
@@ -210,6 +234,116 @@
  
  [dependencies]
  anyhow = { workspace = true }
+--- a/codex-rs/tui/src/chatwidget/tests/exec_flow.rs
++++ b/codex-rs/tui/src/chatwidget/tests/exec_flow.rs
+@@ -276,7 +276,6 @@
+     let height = chat.desired_height(width);
+     let mut terminal = ratatui::Terminal::new(ratatui::backend::TestBackend::new(width, height))
+         .expect("create terminal");
+-    terminal.set_viewport_area(Rect::new(0, 0, width, height));
+     terminal
+         .draw(|f| chat.render(f.area(), f.buffer_mut()))
+         .expect("draw chatwidget");
+@@ -1156,7 +1155,6 @@
+     let height = chat.desired_height(width);
+     let mut terminal =
+         ratatui::Terminal::new(VT100Backend::new(width, height)).expect("create terminal");
+-    terminal.set_viewport_area(Rect::new(0, 0, width, height));
+     terminal
+         .draw(|f| chat.render(f.area(), f.buffer_mut()))
+         .expect("draw approval modal (no reason)");
+@@ -1200,7 +1198,6 @@
+     let height = chat.desired_height(width);
+     let mut terminal =
+         ratatui::Terminal::new(VT100Backend::new(width, height)).expect("create terminal");
+-    terminal.set_viewport_area(Rect::new(0, 0, width, height));
+     terminal
+         .draw(|f| chat.render(f.area(), f.buffer_mut()))
+         .expect("draw approval modal (multiline prefix)");
+@@ -1244,7 +1241,6 @@
+     let height = chat.desired_height(/*width*/ 80);
+     let mut terminal =
+         ratatui::Terminal::new(VT100Backend::new(/*width*/ 80, height)).expect("create terminal");
+-    terminal.set_viewport_area(Rect::new(0, 0, 80, height));
+     terminal
+         .draw(|f| chat.render(f.area(), f.buffer_mut()))
+         .expect("draw patch approval modal");
+--- a/codex-rs/tui/src/chatwidget/tests/permissions.rs
++++ b/codex-rs/tui/src/chatwidget/tests/permissions.rs
+@@ -259,7 +259,6 @@
+     let height = chat.desired_height(width);
+     let mut terminal =
+         ratatui::Terminal::new(VT100Backend::new(width, height)).expect("create terminal");
+-    terminal.set_viewport_area(Rect::new(0, 0, width, height));
+     terminal
+         .draw(|f| chat.render(f.area(), f.buffer_mut()))
+         .expect("render approvals popup");
+--- a/codex-rs/tui/src/chatwidget/tests/status_and_layout.rs
++++ b/codex-rs/tui/src/chatwidget/tests/status_and_layout.rs
+@@ -1834,7 +1834,6 @@
+     let height = chat.desired_height(width);
+     let mut terminal = ratatui::Terminal::new(ratatui::backend::TestBackend::new(width, height))
+         .expect("create terminal");
+-    terminal.set_viewport_area(Rect::new(0, 0, width, height));
+     terminal
+         .draw(|f| chat.render(f.area(), f.buffer_mut()))
+         .expect("draw status + approval modal");
+--- a/codex-rs/tui/src/terminal_palette.rs
++++ b/codex-rs/tui/src/terminal_palette.rs
+@@ -78,9 +78,6 @@
+ #[cfg(all(unix, not(test)))]
+ mod imp {
+     use super::DefaultColors;
+-    use crossterm::style::Color as CrosstermColor;
+-    use crossterm::style::query_background_color;
+-    use crossterm::style::query_foreground_color;
+     use std::sync::Mutex;
+     use std::sync::OnceLock;
+ 
+@@ -132,26 +129,9 @@
+     }
+ 
+     pub(super) fn requery_default_colors() {
+-        if let Ok(mut cache) = default_colors_cache().lock() {
+-            // Don't try to refresh if the cache is already attempted and failed.
+-            if cache.attempted && cache.value.is_none() {
+-                return;
+-            }
+-
+-            // Focus events arrive after crossterm's event stream is active. Requery through
+-            // crossterm here so unrelated input stays in crossterm's skipped-event queue instead
+-            // of being consumed by the bounded startup probe's direct tty reads.
+-            let fg = query_foreground_color()
+-                .ok()
+-                .flatten()
+-                .and_then(color_to_tuple);
+-            let bg = query_background_color()
+-                .ok()
+-                .flatten()
+-                .and_then(color_to_tuple);
+-            cache.value = fg.zip(bg).map(|(fg, bg)| DefaultColors { fg, bg });
+-            cache.attempted = true;
+-        }
++        // Registry crossterm cannot query OSC colors through its event queue.
++        // Preserve the startup palette: direct tty reads here could consume input
++        // while the event stream is active.
+     }
+ 
+     /// Queries terminal default colors through the bounded startup probe path.
+@@ -167,13 +147,6 @@
+                 fg: colors.fg,
+                 bg: colors.bg,
+             })
+-    }
+-
+-    fn color_to_tuple(color: CrosstermColor) -> Option<(u8, u8, u8)> {
+-        match color {
+-            CrosstermColor::Rgb { r, g, b } => Some((r, g, b)),
+-            _ => None,
+-        }
+     }
+ }
+ 
 --- a/codex-rs/utils/cargo-bin/BUILD.bazel
 +++ b/codex-rs/utils/cargo-bin/BUILD.bazel
 @@ -8,6 +8,7 @@

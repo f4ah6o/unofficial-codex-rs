@@ -36,6 +36,7 @@ use tokio_tungstenite::tungstenite::Error as WsError;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use tracing::Instrument;
 use tracing::Span;
 use tracing::debug;
@@ -43,7 +44,6 @@ use tracing::error;
 use tracing::info;
 use tracing::instrument;
 use tracing::trace;
-use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use url::Url;
 
 struct WsStream {

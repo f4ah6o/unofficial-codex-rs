@@ -28,6 +28,12 @@ manual review. `python3 scripts/check-overlay-regeneration.py` verifies that
 the recorded upstream reproduces the checked-in workspace and that applying
 the overlay twice is idempotent (Cargo.lock is validated separately).
 
+The TUI uses the crates.io releases of ratatui and crossterm rather than the
+upstream Git forks. Ratatui 0.29 requires unicode-width 0.2.0; the TUI's test
+parser therefore uses vt100 0.15.2, which can coexist with that requirement.
+The startup palette is retained on focus changes because registry crossterm
+does not provide the fork's event-queue-safe color requery API.
+
 Publishing is tag-driven. The publish workflow authenticates with crates.io
 Trusted Publishing and publishes the 119 local packages in dependency order,
 waiting for index propagation between retries. Configure the trusted publisher
