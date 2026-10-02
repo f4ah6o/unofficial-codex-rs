@@ -78,13 +78,40 @@ class PublishOrderTest(unittest.TestCase):
 
 
 class PublishPassTest(unittest.TestCase):
+    def test_tui_publish_uses_registry_requirement_and_restores_on_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace = root / "Cargo.toml"
+            original_root = '[workspace.dependencies]\nunicode-width = "0.2"\n'
+            workspace.write_text(original_root)
+            manifest = root / "tui/Cargo.toml"
+            manifest.parent.mkdir()
+            original = '[dev-dependencies]\nvt100 = "0.16.2"\n'
+            manifest.write_text(original)
+            lock = root / "Cargo.lock"
+            lock.write_text("original lock")
+            selected = package("unofficial-codex-tui")
+            selected["manifest_path"] = str(manifest)
+            def failed_run(command, **kwargs):
+                self.assertNotIn("dev-dependencies", manifest.read_text())
+                self.assertIn('unicode-width = "=0.2.0"', workspace.read_text())
+                lock.write_text("changed lock")
+                raise OSError("publish failed")
+            with patch.object(MODULE, "MANIFEST", workspace), patch.object(MODULE, "LOCKFILE", lock), patch.object(MODULE.subprocess, "run", side_effect=failed_run):
+                with self.assertRaisesRegex(OSError, "publish failed"):
+                    MODULE.publish(selected, dry_run=False)
+            self.assertEqual(workspace.read_text(), original_root)
+            self.assertEqual(manifest.read_text(), original)
+            self.assertEqual(lock.read_text(), "original lock")
+
     def test_grouped_dry_run_restores_multiple_bootstrap_manifests_and_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             lock = root / "Cargo.lock"
             lock.write_text("original lock")
             workspace = root / "Cargo.toml"
-            workspace.write_text('[workspace]\nmembers = []\n')
+            root_original = '[workspace]\nmembers = []\n[workspace.dependencies]\nunicode-width = "0.2"\n'
+            workspace.write_text(root_original)
             packages = []
             original = '[dependencies]\nnormal = "1"\n[dev-dependencies]\nhelper = "1"\n'
             for name in ["unofficial-codex-core", "unofficial-codex-tui"]:
@@ -100,6 +127,7 @@ class PublishPassTest(unittest.TestCase):
                 self.assertEqual(command.count("--package"), 2)
                 self.assertIn('"unofficial-codex-core"', workspace.read_text())
                 self.assertIn('"unofficial-codex-tui"', workspace.read_text())
+                self.assertIn('unicode-width = "=0.2.0"', workspace.read_text())
                 for selected in packages:
                     self.assertNotIn("dev-dependencies", Path(selected["manifest_path"]).read_text())
                 lock.write_text("changed lock")
@@ -107,7 +135,7 @@ class PublishPassTest(unittest.TestCase):
             with patch.object(MODULE, "MANIFEST", workspace), patch.object(MODULE, "LOCKFILE", lock), patch.object(MODULE.subprocess, "run", side_effect=failed_run):
                 self.assertEqual(MODULE.verify_packages(packages), 101)
             self.assertEqual(lock.read_text(), "original lock")
-            self.assertEqual(workspace.read_text(), '[workspace]\nmembers = []\n')
+            self.assertEqual(workspace.read_text(), root_original)
             self.assertEqual([Path(p["manifest_path"]).read_text() for p in packages], [original, original])
 
     def test_grouped_dry_run_restores_after_launch_failure(self):

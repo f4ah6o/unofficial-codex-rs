@@ -116,6 +116,7 @@ def publish(package: dict, *, dry_run: bool) -> bool:
     manifest_path = Path(package["manifest_path"])
     restore_manifest = None
     restore_lock = None
+    restore_root = None
 
     if strip_dev_dependencies:
         print(
@@ -145,6 +146,9 @@ def publish(package: dict, *, dry_run: bool) -> bool:
         command.append("--locked")
 
     try:
+        if name == "unofficial-codex-tui":
+            restore_root = MANIFEST.read_bytes()
+            MANIFEST.write_text(registry_tui_dependencies(restore_root.decode()))
         mode = "dry run" if dry_run else "single attempt"
         print(f"Publishing {name} ({mode})", flush=True)
         result = subprocess.run(command, text=True, capture_output=True)
@@ -158,6 +162,8 @@ def publish(package: dict, *, dry_run: bool) -> bool:
         print(f"{name} failed this attempt; deferring to a later pass.", flush=True)
         return False
     finally:
+        if restore_root is not None:
+            MANIFEST.write_bytes(restore_root)
         if restore_manifest is not None:
             manifest_path.write_text(restore_manifest, encoding="utf-8")
             print(f"Restored {manifest_path}", flush=True)
@@ -179,6 +185,17 @@ def publish_in_passes(
             print(f"Retrying {len(pending)} packages after index propagation.", flush=True)
             time.sleep(retry_delay)
     return [package["name"] for package in pending]
+
+
+def registry_tui_dependencies(text: str) -> str:
+    # The published ratatui 0.29.0 pins unicode-width to 0.2.0, whereas the
+    # workspace's Git fork permits 0.2.1. Publish the compatible requirement
+    # after dropping TUI's test-only vt100 dependency (which requires 0.2.1).
+    updated, count = re.subn(r'(?m)^unicode-width\s*=\s*"0\.2"\s*$',
+                            'unicode-width = "=0.2.0"', text)
+    if count != 1:
+        raise ValueError("unexpected unicode-width requirement; review registry compatibility")
+    return updated
 
 
 def verify_packages(packages: list[dict]) -> int:
@@ -212,6 +229,8 @@ def verify_packages(packages: list[dict]) -> int:
             )
             if replacements != 1:
                 raise ValueError("missing workspace members table")
+            if any(p["name"] == "unofficial-codex-tui" for p in bootstrap):
+                root_text = registry_tui_dependencies(root_text)
             MANIFEST.write_text(root_text)
             if LOCKFILE.exists():
                 restore.callback(LOCKFILE.write_bytes, LOCKFILE.read_bytes())
