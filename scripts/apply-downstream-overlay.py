@@ -260,18 +260,11 @@ def remove_registry_incompatible_features(
         )
 
         def rewrite(match: re.Match[str]) -> str:
-            body = match.group(2)
-            for feature in features:
-                body = re.sub(
-                    rf'(?m)^\s*"{re.escape(feature)}",?\s*$\n?',
-                    "",
-                    body,
-                )
-                body = re.sub(
-                    rf',\s*"{re.escape(feature)}"',
-                    "",
-                    body,
-                )
+            retained = [
+                feature for feature in re.findall(r'"([^\"]+)"', match.group(2))
+                if feature not in features
+            ]
+            body = ", ".join(f'"{feature}"' for feature in retained)
             return f"{match.group(1)}{body}{match.group(3)}"
 
         text = dependency_re.sub(rewrite, text, count=1)

@@ -9,16 +9,6 @@
  opentelemetry = "0.31.0"
  opentelemetry-appender-tracing = "0.31.0"
  opentelemetry-otlp = "0.31.0"
-@@ -389,8 +389,7 @@
- tokio = "1"
- tokio-stream = "0.1.18"
- tokio-test = "0.4"
--tokio-tungstenite = { version = "0.28.0", features = [    "rustls-tls-native-roots",
--] }
-+tokio-tungstenite = { version = "0.28.0", features = ["rustls-tls-native-roots"] }
- tokio-util = "0.7.18"
- toml = "0.9.5"
- toml_edit = "0.24.0"
 @@ -404,7 +403,7 @@
  tree-sitter = "0.25.10"
  tree-sitter-bash = "0.25"

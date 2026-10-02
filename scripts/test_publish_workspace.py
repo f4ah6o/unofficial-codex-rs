@@ -78,6 +78,50 @@ class PublishOrderTest(unittest.TestCase):
 
 
 class PublishPassTest(unittest.TestCase):
+    def test_grouped_dry_run_restores_multiple_bootstrap_manifests_and_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            lock = root / "Cargo.lock"
+            lock.write_text("original lock")
+            packages = []
+            original = '[dependencies]\nnormal = "1"\n[dev-dependencies]\nhelper = "1"\n'
+            for name in ["unofficial-codex-core", "unofficial-codex-tui"]:
+                manifest = root / name / "Cargo.toml"
+                manifest.parent.mkdir()
+                manifest.write_text(original)
+                selected = package(name)
+                selected["manifest_path"] = str(manifest)
+                packages.append(selected)
+            def failed_run(command):
+                self.assertIn("--dry-run", command)
+                self.assertIn("--allow-dirty", command)
+                self.assertEqual(command.count("--package"), 2)
+                for selected in packages:
+                    self.assertNotIn("dev-dependencies", Path(selected["manifest_path"]).read_text())
+                lock.write_text("changed lock")
+                return subprocess.CompletedProcess(command, 101)
+            with patch.object(MODULE, "LOCKFILE", lock), patch.object(MODULE.subprocess, "run", side_effect=failed_run):
+                self.assertEqual(MODULE.verify_packages(packages), 101)
+            self.assertEqual(lock.read_text(), "original lock")
+            self.assertEqual([Path(p["manifest_path"]).read_text() for p in packages], [original, original])
+
+    def test_grouped_dry_run_restores_after_launch_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "Cargo.toml"
+            original = '[dev-dependencies]\nhelper = "1"\n'
+            manifest.write_text(original)
+            selected = package("unofficial-codex-core")
+            selected["manifest_path"] = str(manifest)
+            lock = Path(directory) / "Cargo.lock"
+            def failed_run(command):
+                lock.write_text("new lock")
+                raise OSError("launch failed")
+            with patch.object(MODULE, "LOCKFILE", lock), patch.object(MODULE.subprocess, "run", side_effect=failed_run):
+                with self.assertRaisesRegex(OSError, "launch failed"):
+                    MODULE.verify_packages([selected])
+            self.assertEqual(manifest.read_text(), original)
+            self.assertFalse(lock.exists())
+
     def test_retries_failed_packages_without_republishing_successes(self):
         with patch.object(MODULE, "publish", side_effect=[False, True, True]) as publish:
             with patch.object(MODULE.time, "sleep"):

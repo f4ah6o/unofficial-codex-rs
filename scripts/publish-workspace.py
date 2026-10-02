@@ -8,6 +8,7 @@ waits for crates.io index propagation, and can be rerun after a partial release.
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import json
 import subprocess
 import time
@@ -178,6 +179,37 @@ def publish_in_passes(
     return [package["name"] for package in pending]
 
 
+def verify_packages(packages: list[dict]) -> int:
+    """Verify a release together so unpublished local dependencies are staged.
+
+    Per-crate dry runs cannot bootstrap a fresh version: dependencies are never
+    uploaded. Cargo's multi-package publishing stages artifacts in a temporary
+    local registry and verifies their normalized manifests against each other.
+    """
+    if not packages:
+        return 0
+    command = ["cargo", "publish", "--manifest-path", str(MANIFEST), "--dry-run"]
+    with ExitStack() as restore:
+        bootstrap = [p for p in packages if p["name"] in PUBLISH_WITHOUT_DEV_DEPENDENCIES]
+        if bootstrap:
+            if LOCKFILE.exists():
+                restore.callback(LOCKFILE.write_bytes, LOCKFILE.read_bytes())
+            else:
+                restore.callback(LOCKFILE.unlink, missing_ok=True)
+            for package in bootstrap:
+                manifest = Path(package["manifest_path"])
+                # Register restoration before attempting a mutation.
+                restore.callback(manifest.write_bytes, manifest.read_bytes())
+                without_dev_dependencies(manifest)
+            command.append("--allow-dirty")
+        else:
+            command.append("--locked")
+        for package in packages:
+            command.extend(["--package", package["name"]])
+        print(f"Verifying {len(packages)} packaged artifacts together.", flush=True)
+        return subprocess.run(command).returncode
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--plan", action="store_true")
@@ -213,6 +245,9 @@ def main() -> int:
         for package in packages:
             print(package["name"])
         return 0
+
+    if args.dry_run:
+        return verify_packages(packages)
 
     mode = "dry run" if args.dry_run else "publish"
     print(f"{mode}: processing {len(packages)} local Cargo packages.", flush=True)

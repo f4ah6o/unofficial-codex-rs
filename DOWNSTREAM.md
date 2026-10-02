@@ -34,4 +34,12 @@ waiting for index propagation between retries. Configure the trusted publisher
 for this repository before creating an unofficial-codex-v<version> tag. A
 workspace release is intentionally not atomic, so a failed run can be rerun.
 
+Before publishing, `python3 scripts/publish-workspace.py --dry-run` packages
+and verifies the release together using Cargo's temporary local registry. This
+also validates a fresh version whose first-party dependencies are not yet on
+crates.io. The explicit bootstrap policy temporarily omits test-only cycle
+edges and restores the manifests and lockfile after success or failure. The
+packaging workflow runs this check on PRs and downstream branch pushes, so a
+merge conflict does not prevent validation of the proposed release artifacts.
+
 This project is not affiliated with, endorsed by, or sponsored by OpenAI.

@@ -2,7 +2,7 @@ name: Check crates.io packaging
 
 on:
   push:
-    branches: [main]
+    branches: [main, "downstream/**"]
     paths:
       - ".github/workflows/registry-check.yml"
       - ".github/workflows/publish.yml"
@@ -35,6 +35,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev libcap-dev
+
       - name: Check namespace and dependency guardrails
         run: python3 scripts/check-cratesio-ready.py
 
@@ -49,6 +54,9 @@ jobs:
 
       - name: Check publish dependency order
         run: python3 scripts/publish-workspace.py --plan
+
+      - name: Verify packaged artifacts without uploading
+        run: python3 scripts/publish-workspace.py --dry-run
 
       - name: Compile the workspace from the locked graph
         run: cargo check --manifest-path codex-rs/Cargo.toml --workspace --locked --all-targets
