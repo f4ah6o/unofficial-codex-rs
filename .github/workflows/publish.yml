@@ -18,6 +18,11 @@ jobs:
       CARGO_PROFILE_DEV_DEBUG: "0"
       CARGO_INCREMENTAL: "0"
     steps:
+      - name: Make room for standalone package builds
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
