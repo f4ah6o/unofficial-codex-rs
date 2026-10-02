@@ -48,6 +48,14 @@ jobs:
           python3 scripts/apply-downstream-overlay.py --upstream-revision "$UPSTREAM_SHA"
           cargo generate-lockfile --manifest-path codex-rs/Cargo.toml
 
+      - name: Verify regenerated overlay before opening a PR
+        run: |
+          python3 scripts/check-overlay-regeneration.py
+          python3 scripts/check-cratesio-ready.py
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          cargo metadata --manifest-path codex-rs/Cargo.toml --locked --no-deps --format-version 1
+          python3 scripts/publish-workspace.py --plan
+
       - name: Create sync pull request
         uses: peter-evans/create-pull-request@v7
         with:

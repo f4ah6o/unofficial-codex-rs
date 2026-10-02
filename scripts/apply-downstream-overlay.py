@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -393,6 +394,22 @@ def main() -> int:
             )
         if updated != original_text:
             manifest.write_text(updated, encoding="utf-8")
+
+    # Maintain the source/API and manifest adaptations alongside the mechanical
+    # namespace rewrite. Fail closed on upstream drift instead of opening an
+    # incompatible sync PR. Reverse-check permits an idempotent second run.
+    patch = REPO_ROOT / "scripts/patches/registry-compat.patch"
+    command = ["git", "apply", "--check", str(patch)]
+    check = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True)
+    if check.returncode == 0:
+        subprocess.run(["git", "apply", str(patch)], cwd=REPO_ROOT, check=True)
+    else:
+        reverse = subprocess.run(
+            ["git", "apply", "--reverse", "--check", str(patch)],
+            cwd=REPO_ROOT, capture_output=True, text=True,
+        )
+        if reverse.returncode != 0:
+            raise SystemExit("registry compatibility patch needs rebasing:\n" + check.stderr)
 
     VERSION_FILE.write_text(f"{version}\n", encoding="utf-8")
     revision = args.upstream_revision

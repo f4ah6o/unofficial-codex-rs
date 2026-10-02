@@ -4,12 +4,18 @@ on:
   push:
     branches: [main]
     paths:
+      - ".github/workflows/registry-check.yml"
+      - ".github/workflows/publish.yml"
+      - ".github/workflows/upstream-sync.yml"
       - "codex-rs/**"
       - "scripts/**"
       - "DOWNSTREAM_VERSION"
       - "UPSTREAM_REVISION"
   pull_request:
     paths:
+      - ".github/workflows/registry-check.yml"
+      - ".github/workflows/publish.yml"
+      - ".github/workflows/upstream-sync.yml"
       - "codex-rs/**"
       - "scripts/**"
       - "DOWNSTREAM_VERSION"
@@ -24,11 +30,19 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Check namespace and dependency guardrails
         run: python3 scripts/check-cratesio-ready.py
+
+      - name: Test downstream automation
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+
+      - name: Check overlay regeneration and idempotence
+        run: python3 scripts/check-overlay-regeneration.py
 
       - name: Resolve workspace metadata
         run: cargo metadata --manifest-path codex-rs/Cargo.toml --locked --no-deps --format-version 1

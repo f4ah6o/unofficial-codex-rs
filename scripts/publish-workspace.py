@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +38,8 @@ def metadata() -> dict:
             "metadata",
             "--manifest-path",
             str(MANIFEST),
+            "--locked",
+            "--no-deps",
             "--format-version",
             "1",
         ],
@@ -56,9 +59,10 @@ def publish_order(data: dict) -> list[dict]:
 
     for package_id, package in packages.items():
         for dependency in package["dependencies"]:
-            # Dev-dependencies do not participate in the published dependency
-            # graph. Normal and build dependencies must be available first.
-            if dependency["kind"] == "dev":
+            # Cargo resolves retained versioned dev-dependencies during
+            # packaging too. Omit only the explicitly stripped bootstrap edges.
+            if (dependency["kind"] == "dev"
+                    and package["name"] in PUBLISH_WITHOUT_DEV_DEPENDENCIES):
                 continue
             dependency_id = by_name.get(dependency["name"])
             if dependency_id and dependency_id != package_id:
@@ -74,7 +78,10 @@ def publish_order(data: dict) -> list[dict]:
         )
         if not ready:
             cycle = sorted(packages[package_id]["name"] for package_id in pending)
-            raise SystemExit(f"local Cargo dependency cycle: {cycle}")
+            raise SystemExit(
+                f"local Cargo dependency cycle: {cycle}; review the explicit "
+                "PUBLISH_WITHOUT_DEV_DEPENDENCIES bootstrap policy"
+            )
         ordered.extend(ready)
         pending.difference_update(ready)
 
@@ -90,8 +97,8 @@ def without_dev_dependencies(manifest_path: Path) -> str:
     for line in lines:
         header = line.strip()
         if header.startswith("[") and header.endswith("]"):
-            skipping = header == "[dev-dependencies]" or (
-                header.startswith("[target.") and header.endswith(".dev-dependencies]")
+            skipping = header.startswith("[dev-dependencies") or (
+                header.startswith("[target.") and ".dev-dependencies" in header
             )
         if not skipping:
             stripped.append(line)
@@ -145,7 +152,7 @@ def publish(package: dict, *, dry_run: bool) -> bool:
         if "already exists" in combined:
             print(f"{name} already exists; continuing for rerun safety.", flush=True)
             return True
-        print(f"{name} failed once; skipping it and continuing.", flush=True)
+        print(f"{name} failed this attempt; deferring to a later pass.", flush=True)
         return False
     finally:
         if restore_manifest is not None:
@@ -156,9 +163,26 @@ def publish(package: dict, *, dry_run: bool) -> bool:
             print(f"Restored {LOCKFILE}", flush=True)
 
 
+def publish_in_passes(
+    packages: list[dict], *, dry_run: bool, max_passes: int, retry_delay: float,
+) -> list[str]:
+    """Retry incomplete packages without republishing successful packages."""
+    pending = packages
+    for attempt in range(max_passes):
+        pending = [package for package in pending if not publish(package, dry_run=dry_run)]
+        if not pending:
+            return []
+        if attempt + 1 < max_passes:
+            print(f"Retrying {len(pending)} packages after index propagation.", flush=True)
+            time.sleep(retry_delay)
+    return [package["name"] for package in pending]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--plan", action="store_true")
+    parser.add_argument("--max-passes", type=int, default=5)
+    parser.add_argument("--retry-delay", type=float, default=30)
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -172,6 +196,8 @@ def main() -> int:
         help="select one or more packages while preserving dependency order",
     )
     args = parser.parse_args()
+    if args.max_passes < 1 or args.retry_delay < 0:
+        parser.error("--max-passes must be positive and --retry-delay nonnegative")
 
     data = metadata()
     packages = publish_order(data)
@@ -190,12 +216,12 @@ def main() -> int:
 
     mode = "dry run" if args.dry_run else "publish"
     print(f"{mode}: processing {len(packages)} local Cargo packages.", flush=True)
-    skipped: list[str] = []
-    for package in packages:
-        if not publish(package, dry_run=args.dry_run):
-            skipped.append(package["name"])
+    skipped = publish_in_passes(
+        packages, dry_run=args.dry_run,
+        max_passes=args.max_passes, retry_delay=args.retry_delay,
+    )
     if skipped:
-        print("Skipped packages after one failed attempt:", flush=True)
+        print(f"Failed packages after {args.max_passes} passes:", flush=True)
         for name in skipped:
             print(f"  - {name}", flush=True)
         return 1

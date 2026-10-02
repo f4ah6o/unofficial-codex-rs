@@ -21,6 +21,13 @@ workflow replaces codex-rs/ with the upstream tree, reapplies the overlay,
 updates the downstream CalVer, regenerates Cargo.lock, and opens a pull
 request for review.
 
+Source and manifest compatibility adaptations are maintained in
+`scripts/patches/registry-compat.patch`, applied after the mechanical namespace
+rewrite. Upstream changes that no longer accept the patch stop the sync for
+manual review. `python3 scripts/check-overlay-regeneration.py` verifies that
+the recorded upstream reproduces the checked-in workspace and that applying
+the overlay twice is idempotent (Cargo.lock is validated separately).
+
 Publishing is tag-driven. The publish workflow authenticates with crates.io
 Trusted Publishing and publishes the 119 local packages in dependency order,
 waiting for index propagation between retries. Configure the trusted publisher
