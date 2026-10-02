@@ -43,6 +43,8 @@ jobs:
           fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
 
       - name: Install native build dependencies
         run: |
@@ -63,6 +65,15 @@ jobs:
 
       - name: Check publish dependency order
         run: python3 scripts/publish-workspace.py --plan
+
+      - name: Verify bundled native build inputs
+        run: python3 scripts/publish-workspace.py --dry-run --package unofficial-codex-bwrap
+
+      - name: Lint the Linux helper
+        run: cargo clippy --manifest-path codex-rs/Cargo.toml -p unofficial-codex-bwrap --all-targets --locked
+
+      - name: Check Linux helper formatting
+        run: rustfmt --edition 2024 --check codex-rs/bwrap/build.rs
 
       - name: Compile the workspace from the locked graph
         env:

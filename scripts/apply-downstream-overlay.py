@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -344,6 +345,20 @@ def rewrite_workspace_root(
     return rewrite_dependency_tables(updated, package_map, version)
 
 
+def copy_bwrap_sources(source: Path, destination: Path) -> None:
+    """Bundle native build inputs and their license alongside the Cargo crate."""
+    if not source.is_dir():
+        raise SystemExit(f"missing vendored bubblewrap source: {source}")
+    destination.mkdir(parents=True, exist_ok=True)
+    for path in sorted(source.iterdir()):
+        if path.suffix not in {".c", ".h"} and path.name not in {"COPYING", "LICENSE", "README.md"}:
+            continue
+        target = destination / path.name
+        if target.is_file() or target.is_symlink():
+            target.unlink()
+        shutil.copy2(path, target, follow_symlinks=False)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", default=None)
@@ -403,6 +418,11 @@ def main() -> int:
         )
         if reverse.returncode != 0:
             raise SystemExit("registry compatibility patch needs rebasing:\n" + check.stderr)
+
+    copy_bwrap_sources(
+        CODEX_RS / "vendor/bubblewrap",
+        CODEX_RS / "bwrap/vendor/bubblewrap",
+    )
 
     VERSION_FILE.write_text(f"{version}\n", encoding="utf-8")
     revision = args.upstream_revision
