@@ -10,8 +10,10 @@ from __future__ import annotations
 import argparse
 from contextlib import ExitStack
 import json
+import re
 import subprocess
 import time
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -192,6 +194,25 @@ def verify_packages(packages: list[dict]) -> int:
     with ExitStack() as restore:
         bootstrap = [p for p in packages if p["name"] in PUBLISH_WITHOUT_DEV_DEPENDENCIES]
         if bootstrap:
+            # Some test-support crates are implicit workspace members only
+            # through dev edges. Keep every selected package selectable after
+            # removing those edges for bootstrap.
+            original_root = MANIFEST.read_bytes()
+            restore.callback(MANIFEST.write_bytes, original_root)
+            root_text = original_root.decode()
+            members = tomllib.loads(root_text)["workspace"]["members"]
+            members = sorted(set(members) | {
+                Path(p["manifest_path"]).parent.relative_to(MANIFEST.parent).as_posix()
+                for p in packages
+            })
+            root_text, replacements = re.subn(
+                r"(?ms)^(\[workspace\].*?^members\s*=\s*)\[.*?\]",
+                lambda match: match.group(1) + json.dumps(members),
+                root_text, count=1,
+            )
+            if replacements != 1:
+                raise ValueError("missing workspace members table")
+            MANIFEST.write_text(root_text)
             if LOCKFILE.exists():
                 restore.callback(LOCKFILE.write_bytes, LOCKFILE.read_bytes())
             else:

@@ -83,6 +83,8 @@ class PublishPassTest(unittest.TestCase):
             root = Path(directory)
             lock = root / "Cargo.lock"
             lock.write_text("original lock")
+            workspace = root / "Cargo.toml"
+            workspace.write_text('[workspace]\nmembers = []\n')
             packages = []
             original = '[dependencies]\nnormal = "1"\n[dev-dependencies]\nhelper = "1"\n'
             for name in ["unofficial-codex-core", "unofficial-codex-tui"]:
@@ -96,18 +98,24 @@ class PublishPassTest(unittest.TestCase):
                 self.assertIn("--dry-run", command)
                 self.assertIn("--allow-dirty", command)
                 self.assertEqual(command.count("--package"), 2)
+                self.assertIn('"unofficial-codex-core"', workspace.read_text())
+                self.assertIn('"unofficial-codex-tui"', workspace.read_text())
                 for selected in packages:
                     self.assertNotIn("dev-dependencies", Path(selected["manifest_path"]).read_text())
                 lock.write_text("changed lock")
                 return subprocess.CompletedProcess(command, 101)
-            with patch.object(MODULE, "LOCKFILE", lock), patch.object(MODULE.subprocess, "run", side_effect=failed_run):
+            with patch.object(MODULE, "MANIFEST", workspace), patch.object(MODULE, "LOCKFILE", lock), patch.object(MODULE.subprocess, "run", side_effect=failed_run):
                 self.assertEqual(MODULE.verify_packages(packages), 101)
             self.assertEqual(lock.read_text(), "original lock")
+            self.assertEqual(workspace.read_text(), '[workspace]\nmembers = []\n')
             self.assertEqual([Path(p["manifest_path"]).read_text() for p in packages], [original, original])
 
     def test_grouped_dry_run_restores_after_launch_failure(self):
         with tempfile.TemporaryDirectory() as directory:
-            manifest = Path(directory) / "Cargo.toml"
+            workspace = Path(directory) / "Cargo.toml"
+            workspace.write_text('[workspace]\nmembers = []\n')
+            manifest = Path(directory) / "core/Cargo.toml"
+            manifest.parent.mkdir()
             original = '[dev-dependencies]\nhelper = "1"\n'
             manifest.write_text(original)
             selected = package("unofficial-codex-core")
@@ -116,7 +124,7 @@ class PublishPassTest(unittest.TestCase):
             def failed_run(command):
                 lock.write_text("new lock")
                 raise OSError("launch failed")
-            with patch.object(MODULE, "LOCKFILE", lock), patch.object(MODULE.subprocess, "run", side_effect=failed_run):
+            with patch.object(MODULE, "MANIFEST", workspace), patch.object(MODULE, "LOCKFILE", lock), patch.object(MODULE.subprocess, "run", side_effect=failed_run):
                 with self.assertRaisesRegex(OSError, "launch failed"):
                     MODULE.verify_packages([selected])
             self.assertEqual(manifest.read_text(), original)
