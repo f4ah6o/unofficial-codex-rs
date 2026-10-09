@@ -1,0 +1,86 @@
+name: Check crates.io packaging
+
+on:
+  push:
+    branches: [main, "downstream/**"]
+    paths:
+      - ".github/workflows/registry-check.yml"
+      - ".github/workflows/publish.yml"
+      - ".github/workflows/upstream-sync.yml"
+      - "codex-rs/**"
+      - "scripts/**"
+      - "DOWNSTREAM_VERSION"
+      - "UPSTREAM_REVISION"
+  pull_request:
+    paths:
+      - ".github/workflows/registry-check.yml"
+      - ".github/workflows/publish.yml"
+      - ".github/workflows/upstream-sync.yml"
+      - "codex-rs/**"
+      - "scripts/**"
+      - "DOWNSTREAM_VERSION"
+      - "UPSTREAM_REVISION"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Make room for standalone package builds
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev libcap-dev
+
+      - name: Check namespace and dependency guardrails
+        run: python3 scripts/check-cratesio-ready.py
+
+      - name: Test downstream automation
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+
+      - name: Check overlay regeneration and idempotence
+        run: python3 scripts/check-overlay-regeneration.py
+
+      - name: Resolve workspace metadata
+        run: cargo metadata --manifest-path codex-rs/Cargo.toml --locked --no-deps --format-version 1
+
+      - name: Check publish dependency order
+        run: python3 scripts/publish-workspace.py --plan
+
+      - name: Verify bundled native build inputs
+        run: python3 scripts/publish-workspace.py --dry-run --package unofficial-codex-bwrap
+
+      - name: Lint the Linux helper
+        run: cargo clippy --manifest-path codex-rs/Cargo.toml -p unofficial-codex-bwrap --all-targets --locked
+
+      - name: Check Linux helper formatting
+        run: rustfmt --edition 2024 --check codex-rs/bwrap/build.rs
+
+      - name: Compile the workspace from the locked graph
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/locked-workspace-target
+        run: |
+          cargo check --manifest-path codex-rs/Cargo.toml --workspace --locked --all-targets
+          rm -rf "$CARGO_TARGET_DIR"
+
+      - name: Verify packaged artifacts without uploading
+        run: python3 scripts/publish-workspace.py --dry-run
