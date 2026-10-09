@@ -14902,6 +14902,7 @@ dependencies = [
 name = "unofficial-codex-websocket-client"
 version = "2026.8.0"
 dependencies = [
+ "base64 0.22.1",
  "futures",
  "pretty_assertions",
  "rcgen",

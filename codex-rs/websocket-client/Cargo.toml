@@ -8,10 +8,11 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+base64 = { workspace = true }
 codex-http-client = { workspace = true }
 futures = { workspace = true }
 rustls = { workspace = true }
-tokio = { workspace = true, features = ["net", "rt", "time"] }
+tokio = { workspace = true, features = ["io-util", "net", "rt", "time"] }
 tokio-rustls = { workspace = true }
 tokio-tungstenite = { workspace = true }
 url = { workspace = true }

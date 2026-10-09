@@ -6,16 +6,20 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use codex_http_client::OutboundProxyRoute;
+use codex_http_client::build_rustls_client_config_with_custom_ca;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
 use rustls::ClientConfig;
+use rustls::pki_types::ServerName;
 use tokio::net::TcpStream;
 use tokio::time::Instant;
 use tokio::time::sleep_until;
+use tokio_rustls::TlsConnector;
 use tokio_tungstenite::Connector;
 use tokio_tungstenite::client_async_tls_with_config;
 use tokio_tungstenite::connect_async_tls_with_config;
 use tokio_tungstenite::tungstenite::Error as WebSocketError;
+use tokio_tungstenite::tungstenite::error::TlsError;
 use tokio_tungstenite::tungstenite::error::UrlError;
 use tokio_tungstenite::tungstenite::handshake::client::Request;
 use tokio_tungstenite::tungstenite::handshake::client::Response;
@@ -24,6 +28,11 @@ use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use crate::AsyncIo;
 use crate::ConnectionInner;
 use crate::TcpNodelay;
+use crate::proxy::ProxyConfig;
+use crate::proxy::connect_via_proxy;
+use crate::proxy::invalid_proxy_config;
+use crate::proxy::no_proxy_bypasses;
+use crate::proxy::proxy_config_from_env;
 
 const HAPPY_EYEBALLS_DELAY: Duration = Duration::from_millis(250);
 
@@ -37,8 +46,25 @@ pub(crate) async fn connect(
     let disable_nagle = tcp_nodelay == TcpNodelay::Enabled;
     let proxy_url = match proxy_route {
         OutboundProxyRoute::TransportDefault => {
-            // The crates.io tokio-tungstenite release has no `proxy` feature, so its default
-            // dialer opens the socket directly without environment proxy resolution.
+            // Mirror the forked tungstenite dialer: environment proxy variables
+            // (HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY) select a CONNECT/SOCKS5
+            // tunnel; without them the stock connect path handles the socket itself.
+            if let Some(proxy) = proxy_config_from_env(request.uri())? {
+                let host = websocket_host(&request)?;
+                let port = websocket_port(&request)?;
+                let stream = connect_tcp(proxy.authority(), tcp_nodelay)
+                    .await
+                    .map_err(WebSocketError::Io)?;
+                let stream = connect_via_proxy(stream, &proxy, host, port).await?;
+                let (stream, response) = client_async_tls_with_config(
+                    request,
+                    stream,
+                    Some(config),
+                    tls_config.map(Connector::Rustls),
+                )
+                .await?;
+                return Ok((ConnectionInner::TransportDefault(stream), response));
+            }
             let (stream, response) = connect_async_tls_with_config(
                 request,
                 Some(config),
@@ -49,7 +75,22 @@ pub(crate) async fn connect(
             return Ok((ConnectionInner::TransportDefault(stream), response));
         }
         OutboundProxyRoute::Direct => None,
-        OutboundProxyRoute::Proxy { url, .. } => Some(url),
+        OutboundProxyRoute::Proxy { url, no_proxy } => {
+            // Apply the resolved NO_PROXY value at this layer: the upstream tungstenite
+            // fork made the same decision through its environment parser.
+            match no_proxy {
+                Some(no_proxy)
+                    if no_proxy_bypasses(
+                        websocket_host(&request)?,
+                        websocket_port(&request)?,
+                        &no_proxy,
+                    ) =>
+                {
+                    None
+                }
+                _ => Some(url),
+            }
+        }
     };
 
     let stream: Box<dyn AsyncIo> = match proxy_url {
@@ -62,13 +103,30 @@ pub(crate) async fn connect(
                     .map_err(WebSocketError::Io)?,
             )
         }
-        Some(_url) => {
-            // Proxy tunneling requires the forked tungstenite `proxy` module, which is not
-            // published to crates.io. Fail rather than silently bypass a configured proxy.
-            return Err(WebSocketError::Io(io::Error::new(
-                io::ErrorKind::Unsupported,
-                "websocket proxy routes are unavailable with the crates.io tungstenite dependency",
-            )));
+        Some(url) => {
+            let proxy = ProxyEndpoint::parse(&url)?;
+            let host = websocket_host(&request)?;
+            let port = websocket_port(&request)?;
+            let stream = connect_tcp(proxy.config.authority(), tcp_nodelay)
+                .await
+                .map_err(WebSocketError::Io)?;
+            let stream: Box<dyn AsyncIo> = if proxy.tls {
+                let proxy_tls_config = match &tls_config {
+                    Some(tls_config) => Arc::clone(tls_config),
+                    None => build_rustls_client_config_with_custom_ca()
+                        .map_err(|error| WebSocketError::Io(error.into()))?,
+                };
+                let server_name = ServerName::try_from(proxy.config.host.clone())
+                    .map_err(|_| WebSocketError::Tls(TlsError::InvalidDnsName))?;
+                let stream = TlsConnector::from(proxy_tls_config)
+                    .connect(server_name, stream)
+                    .await
+                    .map_err(WebSocketError::Io)?;
+                Box::new(stream)
+            } else {
+                Box::new(stream)
+            };
+            connect_via_proxy(stream, &proxy.config, host, port).await?
         }
     };
 
@@ -80,6 +138,38 @@ pub(crate) async fn connect(
     )
     .await?;
     Ok((ConnectionInner::Routed(stream), response))
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ProxyEndpoint {
+    config: ProxyConfig,
+    tls: bool,
+}
+
+impl ProxyEndpoint {
+    fn parse(url: &str) -> Result<Self, WebSocketError> {
+        let mut parsed_url =
+            url::Url::parse(url).map_err(|_| invalid_proxy_config("<redacted>"))?;
+        let tls = parsed_url.scheme() == "https";
+        if tls {
+            // Capture the HTTPS default before changing schemes: `Url` normalizes default ports,
+            // so setting 443 before rewriting to HTTP would discard it and later imply port 80.
+            let port = parsed_url
+                .port_or_known_default()
+                .ok_or_else(|| invalid_proxy_config("<redacted>"))?;
+            parsed_url
+                .set_scheme("http")
+                .map_err(|_| invalid_proxy_config("<redacted>"))?;
+            parsed_url
+                .set_port(Some(port))
+                .map_err(|_| invalid_proxy_config("<redacted>"))?;
+        }
+        let config = ProxyConfig::parse(parsed_url.as_str()).map_err(|error| match error {
+            WebSocketError::Url(UrlError::UnsupportedUrlScheme) => error,
+            _ => invalid_proxy_config("<redacted>"),
+        })?;
+        Ok(Self { config, tls })
+    }
 }
 
 fn websocket_host(request: &Request) -> Result<&str, WebSocketError> {

@@ -1,6 +1,7 @@
 //! Proxy-aware WebSocket connection setup shared by Codex API clients.
 
 mod dialer;
+mod proxy;
 
 use std::pin::Pin;
 use std::sync::Arc;
