@@ -29,13 +29,13 @@ use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
-use tokio_tungstenite::tungstenite::proxy::ProxyScheme;
 
 use super::*;
 use crate::AsyncIo;
 use crate::WebSocketConnection;
 use crate::WebSocketConnector;
 use crate::WebSocketTlsMode;
+use crate::proxy::ProxyScheme;
 
 #[tokio::test]
 async fn public_connector_uses_factory_and_exposes_stream_and_sink() {

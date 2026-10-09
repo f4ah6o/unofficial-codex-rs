@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-connectors-extension"
+name = "unofficial-codex-connectors-extension"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-connectors-extension)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]

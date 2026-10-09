@@ -1,14 +1,18 @@
 [package]
-name = "codex-websocket-client"
+name = "unofficial-codex-websocket-client"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-websocket-client)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
+base64 = { workspace = true }
 codex-http-client = { workspace = true }
 futures = { workspace = true }
 rustls = { workspace = true }
-tokio = { workspace = true, features = ["net", "rt", "time"] }
+tokio = { workspace = true, features = ["io-util", "net", "rt", "time"] }
 tokio-rustls = { workspace = true }
 tokio-tungstenite = { workspace = true }
 url = { workspace = true }

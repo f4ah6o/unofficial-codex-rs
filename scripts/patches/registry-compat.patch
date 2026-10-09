@@ -1,0 +1,2330 @@
+diff --git a/codex-rs/Cargo.toml b/codex-rs/Cargo.toml
+index 45b15aa..45e9fb0 100644
+--- a/codex-rs/Cargo.toml
++++ b/codex-rs/Cargo.toml
+@@ -368,7 +368,7 @@ multimap = "0.10.0"
+ notify = "8.2.0"
+ nucleo = { git = "https://github.com/helix-editor/nucleo.git", rev = "4253de9faabb4e5c6d81d946a5e35a90f87347ee" , version = "0.5.0"}
+ once_cell = "1.20.2"
+-openssl-sys = "*"
++openssl-sys = "0.9.111"
+ opentelemetry = "0.31.0"
+ opentelemetry-appender-tracing = "0.31.0"
+ opentelemetry-otlp = "0.31.0"
+@@ -474,7 +474,7 @@ tree-sitter = "0.25.10"
+ tree-sitter-bash = "0.25"
+ tree-sitter-powershell = "=0.26.4"
+ ts-rs = "11"
+-tungstenite = { version = "0.27.0", features = [] }
++tungstenite = { version = "0.28.0" }
+ uds_windows = "1.1.0"
+ unicode-segmentation = "1.12.0"
+ unicode-width = "0.2"
+@@ -582,12 +582,6 @@ opt-level = 0
+ [patch.crates-io]
+ # Uncomment to debug local changes.
+ # ratatui = { path = "../../ratatui" }
+-crossterm = { git = "https://github.com/openai-oss-forks/crossterm", rev = "45fecb9508105988f42fe6ff0441783ed3717f92" }
+-tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186" }
+-tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "4fffad30fe373adbdcffab9545e9e9bf4f2fc19f" }
+ 
+ # Uncomment to debug local changes.
+ # rmcp = { path = "../../rust-sdk/crates/rmcp" }
+-
+-[patch."ssh://git@github.com/openai-oss-forks/tungstenite-rs.git"]
+-tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "4fffad30fe373adbdcffab9545e9e9bf4f2fc19f" }
+diff --git a/codex-rs/app-server-test-client/Cargo.toml b/codex-rs/app-server-test-client/Cargo.toml
+index 912c7ec..0492351 100644
+--- a/codex-rs/app-server-test-client/Cargo.toml
++++ b/codex-rs/app-server-test-client/Cargo.toml
+@@ -28,6 +28,7 @@ url = { workspace = true }
+ uuid = { workspace = true, features = ["v4"] }
+ 
+ [lib]
++name = "codex_app_server_test_client"
+ doctest = false
+ 
+ [dev-dependencies]
+diff --git a/codex-rs/app-server/tests/common/Cargo.toml b/codex-rs/app-server/tests/common/Cargo.toml
+index c2a906f..51462cb 100644
+--- a/codex-rs/app-server/tests/common/Cargo.toml
++++ b/codex-rs/app-server/tests/common/Cargo.toml
+@@ -8,6 +8,7 @@ edition.workspace = true
+ license.workspace = true
+ 
+ [lib]
++name = "app_test_support"
+ path = "lib.rs"
+ doctest = false
+ 
+diff --git a/codex-rs/async-utils/Cargo.toml b/codex-rs/async-utils/Cargo.toml
+index 8f7a457..c745089 100644
+--- a/codex-rs/async-utils/Cargo.toml
++++ b/codex-rs/async-utils/Cargo.toml
+@@ -18,4 +18,5 @@ tokio-util.workspace = true
+ pretty_assertions.workspace = true
+ 
+ [lib]
++name = "codex_async_utils"
+ doctest = false
+diff --git a/codex-rs/backend-client/Cargo.toml b/codex-rs/backend-client/Cargo.toml
+index 09dba3a..631d19e 100644
+--- a/codex-rs/backend-client/Cargo.toml
++++ b/codex-rs/backend-client/Cargo.toml
+@@ -8,6 +8,7 @@ license.workspace = true
+ publish = true
+ 
+ [lib]
++name = "codex_backend_client"
+ path = "src/lib.rs"
+ doctest = false
+ 
+diff --git a/codex-rs/bwrap/Cargo.toml b/codex-rs/bwrap/Cargo.toml
+index cc33aac..dd3f00b 100644
+--- a/codex-rs/bwrap/Cargo.toml
++++ b/codex-rs/bwrap/Cargo.toml
+@@ -5,7 +5,7 @@ repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+ publish = true
+ version.workspace = true
+ edition.workspace = true
+-license.workspace = true
++license = "Apache-2.0 AND LGPL-2.0-or-later"
+ 
+ [[bin]]
+ name = "bwrap"
+diff --git a/codex-rs/bwrap/build.rs b/codex-rs/bwrap/build.rs
+index d9d8793..93fd6d2 100644
+--- a/codex-rs/bwrap/build.rs
++++ b/codex-rs/bwrap/build.rs
+@@ -10,15 +10,6 @@ fn main() {
+     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
+     println!("cargo:rerun-if-env-changed=CODEX_SKIP_BWRAP_BUILD");
+ 
+-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
+-    let vendor_dir = manifest_dir.join("../vendor/bubblewrap");
+-    for source in ["bubblewrap.c", "bind-mount.c", "network.c", "utils.c"] {
+-        println!(
+-            "cargo:rerun-if-changed={}",
+-            vendor_dir.join(source).display()
+-        );
+-    }
+-
+     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+     if target_os != "linux" || env::var_os("CODEX_SKIP_BWRAP_BUILD").is_some() {
+         return;
+@@ -34,6 +25,7 @@ fn try_build_bwrap() -> Result<(), String> {
+         PathBuf::from(env::var("CARGO_MANIFEST_DIR").map_err(|err| err.to_string())?);
+     let out_dir = PathBuf::from(env::var("OUT_DIR").map_err(|err| err.to_string())?);
+     let src_dir = resolve_bwrap_source_dir(&manifest_dir)?;
++    println!("cargo:rerun-if-changed={}", src_dir.display());
+     let libcap = pkg_config::Config::new()
+         .cargo_metadata(false)
+         .probe("libcap")
+@@ -80,7 +72,8 @@ fn try_build_bwrap() -> Result<(), String> {
+ ///
+ /// Priority:
+ /// 1. `CODEX_BWRAP_SOURCE_DIR` points at an existing bubblewrap checkout.
+-/// 2. The vendored bubblewrap tree under `codex-rs/vendor/bubblewrap`.
++/// 2. The crate-local tree under `bwrap/vendor/bubblewrap` (included in archives).
++/// 3. The workspace tree under `codex-rs/vendor/bubblewrap`.
+ fn resolve_bwrap_source_dir(manifest_dir: &Path) -> Result<PathBuf, String> {
+     if let Ok(path) = env::var("CODEX_BWRAP_SOURCE_DIR") {
+         let src_dir = PathBuf::from(path);
+@@ -93,14 +86,17 @@ fn resolve_bwrap_source_dir(manifest_dir: &Path) -> Result<PathBuf, String> {
+         ));
+     }
+ 
+-    let vendor_dir = manifest_dir.join("../vendor/bubblewrap");
+-    if vendor_dir.exists() {
+-        return Ok(vendor_dir);
++    let packaged_dir = manifest_dir.join("vendor/bubblewrap");
++    let workspace_dir = manifest_dir.join("../vendor/bubblewrap");
++    for vendor_dir in [&packaged_dir, &workspace_dir] {
++        if vendor_dir.is_dir() {
++            return Ok(vendor_dir.to_path_buf());
++        }
+     }
+ 
+     Err(format!(
+-        "expected vendored bubblewrap at {}, but it was not found.\n\
+-Set CODEX_BWRAP_SOURCE_DIR to an existing checkout or vendor bubblewrap under codex-rs/vendor.",
+-        vendor_dir.display()
++        "expected vendored bubblewrap at {} or {}, but it was not found. Set CODEX_BWRAP_SOURCE_DIR to an existing checkout.",
++        packaged_dir.display(),
++        workspace_dir.display()
+     ))
+ }
+diff --git a/codex-rs/chatgpt/Cargo.toml b/codex-rs/chatgpt/Cargo.toml
+index 99a5e7f..116d9bc 100644
+--- a/codex-rs/chatgpt/Cargo.toml
++++ b/codex-rs/chatgpt/Cargo.toml
+@@ -31,4 +31,5 @@ serde_json = { workspace = true }
+ tempfile = { workspace = true }
+ 
+ [lib]
++name = "codex_chatgpt"
+ doctest = false
+diff --git a/codex-rs/cli/src/main.rs b/codex-rs/cli/src/main.rs
+index bb56637..93749e9 100644
+--- a/codex-rs/cli/src/main.rs
++++ b/codex-rs/cli/src/main.rs
+@@ -1,3 +1,6 @@
++// The crates.io dependency graph (replacing upstream's git forks and pinned
++// lockfile) produces deeper async type layouts; mirrors mcp-server/app-server.
++#![recursion_limit = "256"]
+ use clap::Args;
+ use clap::CommandFactory;
+ use clap::Parser;
+diff --git a/codex-rs/codex-api/Cargo.toml b/codex-rs/codex-api/Cargo.toml
+index 611d790..77f124f 100644
+--- a/codex-rs/codex-api/Cargo.toml
++++ b/codex-rs/codex-api/Cargo.toml
+@@ -44,4 +44,5 @@ wiremock = { workspace = true }
+ workspace = true
+ 
+ [lib]
++name = "codex_api"
+ doctest = false
+diff --git a/codex-rs/codex-api/src/endpoint/responses_websocket.rs b/codex-rs/codex-api/src/endpoint/responses_websocket.rs
+index 96c2e04..93a99b1 100644
+--- a/codex-rs/codex-api/src/endpoint/responses_websocket.rs
++++ b/codex-rs/codex-api/src/endpoint/responses_websocket.rs
+@@ -35,15 +35,13 @@ use tokio_tungstenite::tungstenite::Error as WsError;
+ use tokio_tungstenite::tungstenite::Message;
+ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+ use tokio_tungstenite::tungstenite::protocol::CloseFrame;
++use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
+ use tracing::Instrument;
+ use tracing::Span;
+ use tracing::debug;
+ use tracing::error;
+ use tracing::info;
+ use tracing::instrument;
+-use tungstenite::extensions::ExtensionsConfig;
+-use tungstenite::extensions::compression::deflate::DeflateConfig;
+-use tungstenite::protocol::WebSocketConfig;
+ use url::Url;
+ 
+ struct WsStream {
+@@ -540,12 +538,7 @@ async fn connect_websocket(
+ }
+ 
+ fn websocket_config() -> WebSocketConfig {
+-    let mut extensions = ExtensionsConfig::default();
+-    extensions.permessage_deflate = Some(DeflateConfig::default());
+-
+-    let mut config = WebSocketConfig::default();
+-    config.extensions = extensions;
+-    config
++    WebSocketConfig::default()
+ }
+ 
+ fn map_ws_error(err: WsError, url: &Url) -> ApiError {
+@@ -979,12 +972,6 @@ mod tests {
+         assert_eq!(wire_payload, expected_payload);
+     }
+ 
+-    #[test]
+-    fn websocket_config_enables_permessage_deflate() {
+-        let config = websocket_config();
+-        assert!(config.extensions.permessage_deflate.is_some());
+-    }
+-
+     #[test]
+     fn parse_wrapped_websocket_error_event_maps_to_transport_http() {
+         let payload = json!({
+diff --git a/codex-rs/codex-client/Cargo.toml b/codex-rs/codex-client/Cargo.toml
+index d36227a..ed5931f 100644
+--- a/codex-rs/codex-client/Cargo.toml
++++ b/codex-rs/codex-client/Cargo.toml
+@@ -20,5 +20,6 @@ tracing = { workspace = true }
+ workspace = true
+ 
+ [lib]
++name = "codex_client"
+ doctest = false
+ test = false
+diff --git a/codex-rs/codex-experimental-api-macros/Cargo.toml b/codex-rs/codex-experimental-api-macros/Cargo.toml
+index a3cdecd..35fd0f2 100644
+--- a/codex-rs/codex-experimental-api-macros/Cargo.toml
++++ b/codex-rs/codex-experimental-api-macros/Cargo.toml
+@@ -8,6 +8,7 @@ edition.workspace = true
+ license.workspace = true
+ 
+ [lib]
++name = "codex_experimental_api_macros"
+ proc-macro = true
+ test = false
+ doctest = false
+diff --git a/codex-rs/config/Cargo.toml b/codex-rs/config/Cargo.toml
+index d32af07..318a658 100644
+--- a/codex-rs/config/Cargo.toml
++++ b/codex-rs/config/Cargo.toml
+@@ -73,4 +73,5 @@ tonic = { workspace = true, features = ["router", "transport"] }
+ tonic-prost-build = { version = "=0.14.3", default-features = false, features = ["transport"] }
+ 
+ [lib]
++name = "codex_config"
+ doctest = false
+diff --git a/codex-rs/connectors/Cargo.toml b/codex-rs/connectors/Cargo.toml
+index 452a1fa..ea16b1b 100644
+--- a/codex-rs/connectors/Cargo.toml
++++ b/codex-rs/connectors/Cargo.toml
+@@ -31,4 +31,5 @@ urlencoding = { workspace = true }
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_connectors"
+ doctest = false
+diff --git a/codex-rs/core/tests/common/Cargo.toml b/codex-rs/core/tests/common/Cargo.toml
+index 27b68f3..a12a98d 100644
+--- a/codex-rs/core/tests/common/Cargo.toml
++++ b/codex-rs/core/tests/common/Cargo.toml
+@@ -8,6 +8,7 @@ edition.workspace = true
+ license.workspace = true
+ 
+ [lib]
++name = "core_test_support"
+ path = "lib.rs"
+ doctest = false
+ 
+diff --git a/codex-rs/core/tests/common/responses.rs b/codex-rs/core/tests/common/responses.rs
+index f06ba73..813e76d 100644
+--- a/codex-rs/core/tests/common/responses.rs
++++ b/codex-rs/core/tests/common/responses.rs
+@@ -18,8 +18,6 @@ use tokio::sync::Notify;
+ use tokio::sync::oneshot;
+ use tokio_tungstenite::accept_hdr_async_with_config;
+ use tokio_tungstenite::tungstenite::Message;
+-use tokio_tungstenite::tungstenite::extensions::ExtensionsConfig;
+-use tokio_tungstenite::tungstenite::extensions::compression::deflate::DeflateConfig;
+ use tokio_tungstenite::tungstenite::handshake::server::Request;
+ use tokio_tungstenite::tungstenite::handshake::server::Response;
+ use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
+@@ -1486,12 +1484,7 @@ fn parse_ws_request_body(message: Message) -> Option<Value> {
+ }
+ 
+ fn websocket_accept_config() -> WebSocketConfig {
+-    let mut extensions = ExtensionsConfig::default();
+-    extensions.permessage_deflate = Some(DeflateConfig::default());
+-
+-    let mut config = WebSocketConfig::default();
+-    config.extensions = extensions;
+-    config
++    WebSocketConfig::default()
+ }
+ 
+ #[derive(Clone)]
+diff --git a/codex-rs/exec-server/Cargo.toml b/codex-rs/exec-server/Cargo.toml
+index 3db7699..f260841 100644
+--- a/codex-rs/exec-server/Cargo.toml
++++ b/codex-rs/exec-server/Cargo.toml
+@@ -8,6 +8,7 @@ edition.workspace = true
+ license.workspace = true
+ 
+ [lib]
++name = "codex_exec_server"
+ doctest = false
+ 
+ [lints]
+diff --git a/codex-rs/feedback/Cargo.toml b/codex-rs/feedback/Cargo.toml
+index 2b5825e..86bf806 100644
+--- a/codex-rs/feedback/Cargo.toml
++++ b/codex-rs/feedback/Cargo.toml
+@@ -27,4 +27,5 @@ tokio = { workspace = true, features = ["macros", "rt"] }
+ wiremock = { workspace = true }
+ 
+ [lib]
++name = "codex_feedback"
+ doctest = false
+diff --git a/codex-rs/file-search/src/lib.rs b/codex-rs/file-search/src/lib.rs
+index bcad11f..24c88b1 100644
+--- a/codex-rs/file-search/src/lib.rs
++++ b/codex-rs/file-search/src/lib.rs
+@@ -503,6 +503,7 @@ fn matcher_worker(
+ ) -> anyhow::Result<()> {
+     const TICK_TIMEOUT_MS: u64 = 10;
+     let config = Config::DEFAULT.match_paths();
++    let mut scores_matcher = Matcher::new(config.clone());
+     let mut indices_matcher = inner.compute_indices.then(|| Matcher::new(config.clone()));
+     let cancel_requested = || inner.cancelled.load(Ordering::Relaxed);
+     let shutdown_requested = || inner.shutdown.load(Ordering::Relaxed);
+@@ -558,13 +559,13 @@ fn matcher_worker(
+                     let limit = inner.limit.min(snapshot.matched_item_count() as usize);
+                     let pattern = snapshot.pattern().column_pattern(0);
+                     let matches: Vec<_> = snapshot
+-                        .matches()
+-                        .iter()
+-                        .take(limit)
+-                        .filter_map(|match_| {
+-                            let item = snapshot.get_item(match_.idx)?;
++                        .matched_items(0..limit as u32)
++                        .filter_map(|item| {
+                             let full_path = item.data.full_path.as_ref();
+                             let (root_idx, relative_path) = get_file_path(Path::new(full_path), &inner.search_directories)?;
++                            let score = pattern
++                                .score(item.matcher_columns[0].slice(..), &mut scores_matcher)
++                                .unwrap_or_default() as u32;
+                             let indices = if let Some(indices_matcher) = indices_matcher.as_mut() {
+                                 let mut idx_vec = Vec::<u32>::new();
+                                 let haystack = item.matcher_columns[0].slice(..);
+@@ -576,7 +577,7 @@ fn matcher_worker(
+                                 None
+                             };
+                             Some(FileMatch {
+-                                score: match_.score,
++                                score,
+                                 path: PathBuf::from(relative_path),
+                                 match_type: item.data.match_type,
+                                 root: inner.search_directories[root_idx].clone(),
+diff --git a/codex-rs/file-system/Cargo.toml b/codex-rs/file-system/Cargo.toml
+index 0915deb..54af2f1 100644
+--- a/codex-rs/file-system/Cargo.toml
++++ b/codex-rs/file-system/Cargo.toml
+@@ -19,5 +19,6 @@ futures = { workspace = true }
+ serde = { workspace = true, features = ["derive"] }
+ 
+ [lib]
++name = "codex_file_system"
+ test = false
+ doctest = false
+diff --git a/codex-rs/git-utils/Cargo.toml b/codex-rs/git-utils/Cargo.toml
+index fc36b16..d682d6d 100644
+--- a/codex-rs/git-utils/Cargo.toml
++++ b/codex-rs/git-utils/Cargo.toml
+@@ -40,4 +40,5 @@ walkdir = { workspace = true }
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_git_utils"
+ doctest = false
+diff --git a/codex-rs/http-client/Cargo.toml b/codex-rs/http-client/Cargo.toml
+index 039b8e5..10e915c 100644
+--- a/codex-rs/http-client/Cargo.toml
++++ b/codex-rs/http-client/Cargo.toml
+@@ -48,4 +48,5 @@ tempfile = { workspace = true }
+ tracing-subscriber = { workspace = true }
+ 
+ [lib]
++name = "codex_http_client"
+ doctest = false
+diff --git a/codex-rs/keyring-store/Cargo.toml b/codex-rs/keyring-store/Cargo.toml
+index 5362fea..ef375af 100644
+--- a/codex-rs/keyring-store/Cargo.toml
++++ b/codex-rs/keyring-store/Cargo.toml
+@@ -27,5 +27,6 @@ keyring = { workspace = true, features = ["windows-native"] }
+ keyring = { workspace = true, features = ["sync-secret-service"] }
+ 
+ [lib]
++name = "codex_keyring_store"
+ test = false
+ doctest = false
+diff --git a/codex-rs/login/Cargo.toml b/codex-rs/login/Cargo.toml
+index 8983eb5..aac9d24 100644
+--- a/codex-rs/login/Cargo.toml
++++ b/codex-rs/login/Cargo.toml
+@@ -58,4 +58,5 @@ tracing-subscriber = { workspace = true }
+ wiremock = { workspace = true }
+ 
+ [lib]
++name = "codex_login"
+ doctest = false
+diff --git a/codex-rs/mcp-server/tests/common/Cargo.toml b/codex-rs/mcp-server/tests/common/Cargo.toml
+index a0ce19e..c00639a 100644
+--- a/codex-rs/mcp-server/tests/common/Cargo.toml
++++ b/codex-rs/mcp-server/tests/common/Cargo.toml
+@@ -8,6 +8,7 @@ edition.workspace = true
+ license.workspace = true
+ 
+ [lib]
++name = "mcp_test_support"
+ path = "lib.rs"
+ test = false
+ doctest = false
+diff --git a/codex-rs/rmcp-client/Cargo.toml b/codex-rs/rmcp-client/Cargo.toml
+index 96cc371..5e38134 100644
+--- a/codex-rs/rmcp-client/Cargo.toml
++++ b/codex-rs/rmcp-client/Cargo.toml
+@@ -98,4 +98,5 @@ keyring = { workspace = true, features = ["sync-secret-service"] }
+ ignored-paths = ["src/oauth/tests/persistor_tests.rs"]
+ 
+ [lib]
++name = "codex_rmcp_client"
+ doctest = false
+diff --git a/codex-rs/secrets/Cargo.toml b/codex-rs/secrets/Cargo.toml
+index 727cf52..63b6f71 100644
+--- a/codex-rs/secrets/Cargo.toml
++++ b/codex-rs/secrets/Cargo.toml
+@@ -30,4 +30,5 @@ pretty_assertions = { workspace = true }
+ tempfile = { workspace = true }
+ 
+ [lib]
++name = "codex_secrets"
+ doctest = false
+diff --git a/codex-rs/shell-command/Cargo.toml b/codex-rs/shell-command/Cargo.toml
+index cfa5c67..70b7e0b 100644
+--- a/codex-rs/shell-command/Cargo.toml
++++ b/codex-rs/shell-command/Cargo.toml
+@@ -32,4 +32,5 @@ pretty_assertions = { workspace = true }
+ tempfile = { workspace = true }
+ 
+ [lib]
++name = "codex_shell_command"
+ doctest = false
+diff --git a/codex-rs/shell-escalation/Cargo.toml b/codex-rs/shell-escalation/Cargo.toml
+index 2095f35..4b72a3d 100644
+--- a/codex-rs/shell-escalation/Cargo.toml
++++ b/codex-rs/shell-escalation/Cargo.toml
+@@ -41,4 +41,5 @@ pretty_assertions = { workspace = true }
+ tempfile = { workspace = true }
+ 
+ [lib]
++name = "codex_shell_escalation"
+ doctest = false
+diff --git a/codex-rs/state/Cargo.toml b/codex-rs/state/Cargo.toml
+index b88fc3d..c92bdeb 100644
+--- a/codex-rs/state/Cargo.toml
++++ b/codex-rs/state/Cargo.toml
+@@ -7,6 +7,9 @@ version.workspace = true
+ edition.workspace = true
+ license.workspace = true
+ 
++[lib]
++name = "codex_state"
++
+ [dependencies]
+ anyhow = { workspace = true }
+ chrono = { workspace = true }
+diff --git a/codex-rs/test-binary-support/Cargo.toml b/codex-rs/test-binary-support/Cargo.toml
+index f619fbc..6ecd3bc 100644
+--- a/codex-rs/test-binary-support/Cargo.toml
++++ b/codex-rs/test-binary-support/Cargo.toml
+@@ -8,6 +8,7 @@ edition.workspace = true
+ license.workspace = true
+ 
+ [lib]
++name = "codex_test_binary_support"
+ path = "lib.rs"
+ test = false
+ doctest = false
+diff --git a/codex-rs/tools/Cargo.toml b/codex-rs/tools/Cargo.toml
+index 5d0a7ba..132ef6d 100644
+--- a/codex-rs/tools/Cargo.toml
++++ b/codex-rs/tools/Cargo.toml
+@@ -39,4 +39,5 @@ codex-utils-cargo-bin = { workspace = true }
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_tools"
+ doctest = false
+diff --git a/codex-rs/tui/src/terminal_probe.rs b/codex-rs/tui/src/terminal_probe.rs
+index b2be461..a8063e3 100644
+--- a/codex-rs/tui/src/terminal_probe.rs
++++ b/codex-rs/tui/src/terminal_probe.rs
+@@ -14,7 +14,6 @@
+ use std::time::Duration;
+ 
+ #[cfg(unix)]
+-mod startup_replay;
+ 
+ /// Default wall-clock budget for each startup probe group.
+ pub(crate) const DEFAULT_TIMEOUT: Duration = Duration::from_millis(100);
+@@ -33,7 +32,6 @@ pub(crate) struct DefaultColors {
+ mod imp {
+     use super::DefaultColors;
+     use super::parse_default_colors;
+-    use super::startup_replay::startup_replay_input;
+     use std::fs::File;
+     use std::fs::OpenOptions;
+     use std::io;
+@@ -280,9 +278,9 @@ mod imp {
+         }
+ 
+         let mut buffer = Vec::new();
+-        let result = read_startup_probe(&mut tty, timeout, keyboard_probe, &mut buffer);
+-        crossterm::event::buffer_input(&startup_replay_input(&buffer))?;
+-        result
++        // The crates.io crossterm release cannot push consumed bytes back into its event
++        // buffer, so unrelated input read during the probe window is discarded here.
++        read_startup_probe(&mut tty, timeout, keyboard_probe, &mut buffer)
+     }
+ 
+     /// Reads available terminal bytes until `parse` recognizes a probe response or time expires.
+@@ -683,9 +681,6 @@ mod imp {
+                     keyboard_enhancement_supported: Some(true),
+                 }
+             );
+-            let mut expected_replay = vec![b'x'; 2_048];
+-            expected_replay.extend_from_slice(b"\x1B[20;10R\x1B[?64;1;2c\x1B[?7u");
+-            assert_eq!(startup_replay_input(&buffer), expected_replay);
+         }
+ 
+         #[test]
+diff --git a/codex-rs/tui/src/terminal_probe/startup_replay.rs b/codex-rs/tui/src/terminal_probe/startup_replay.rs
+deleted file mode 100644
+index 51ef268..0000000
+--- a/codex-rs/tui/src/terminal_probe/startup_replay.rs
++++ /dev/null
+@@ -1,66 +0,0 @@
+-//! Preserve startup terminal input while filtering completed terminal-color replies.
+-
+-const MAX_REPLAYED_OSC_BYTES: usize = 1024;
+-
+-/// Preserve input and bracketed paste while omitting completed terminal-color replies.
+-///
+-/// Keep bounded incomplete OSC prefixes so unread continuations stay parser-framed.
+-pub(super) fn startup_replay_input(input: &[u8]) -> Vec<u8> {
+-    const PASTE_START: &[u8] = b"\x1b[200~";
+-    const PASTE_END: &[u8] = b"\x1b[201~";
+-
+-    let mut replay = Vec::with_capacity(input.len());
+-    let mut cursor = 0;
+-    let mut inside_paste = false;
+-    while cursor < input.len() {
+-        if inside_paste {
+-            if input[cursor..].starts_with(PASTE_END) {
+-                replay.extend_from_slice(PASTE_END);
+-                cursor += PASTE_END.len();
+-                inside_paste = false;
+-            } else if let Some((slot, _)) = [(10, b"\x1b]10;"), (11, b"\x1b]11;")]
+-                .into_iter()
+-                .find(|(_, prefix)| input[cursor..].starts_with(*prefix))
+-                && let Some((end, terminator_len)) = super::osc_payload_end(
+-                    &input[cursor + 2..input.len().min(cursor + MAX_REPLAYED_OSC_BYTES)],
+-                )
+-                && let response = &input[cursor..cursor + 2 + end + terminator_len]
+-                && !response
+-                    .windows(PASTE_END.len())
+-                    .any(|window| window == PASTE_END)
+-                && super::parse_osc_color(response, slot).is_some()
+-            {
+-                cursor += 2 + end + terminator_len;
+-            } else {
+-                replay.push(input[cursor]);
+-                cursor += 1;
+-            }
+-            continue;
+-        }
+-
+-        if input[cursor..].starts_with(PASTE_START) {
+-            replay.extend_from_slice(PASTE_START);
+-            cursor += PASTE_START.len();
+-            inside_paste = true;
+-            continue;
+-        }
+-
+-        if input[cursor..].starts_with(b"\x1b]") {
+-            if let Some((end, terminator_len)) = super::osc_payload_end(&input[cursor + 2..]) {
+-                cursor += 2 + end + terminator_len;
+-                continue;
+-            }
+-            let end = input.len().min(cursor + MAX_REPLAYED_OSC_BYTES);
+-            replay.extend_from_slice(&input[cursor..end]);
+-            break;
+-        }
+-
+-        replay.push(input[cursor]);
+-        cursor += 1;
+-    }
+-    replay
+-}
+-
+-#[cfg(test)]
+-#[path = "startup_replay_tests.rs"]
+-mod tests;
+diff --git a/codex-rs/tui/src/terminal_probe/startup_replay_tests.rs b/codex-rs/tui/src/terminal_probe/startup_replay_tests.rs
+deleted file mode 100644
+index 0c3500a..0000000
+--- a/codex-rs/tui/src/terminal_probe/startup_replay_tests.rs
++++ /dev/null
+@@ -1,58 +0,0 @@
+-use super::MAX_REPLAYED_OSC_BYTES;
+-use super::startup_replay_input;
+-use pretty_assertions::assert_eq;
+-
+-#[test]
+-fn startup_replay_bounds_oversized_osc_without_exposing_its_payload() {
+-    let mut input = b"typed\x1b]10;".to_vec();
+-    input.extend(std::iter::repeat_n(b'x', MAX_REPLAYED_OSC_BYTES));
+-    input.extend_from_slice(b"1\r");
+-
+-    assert_eq!(
+-        startup_replay_input(&input),
+-        input[..b"typed".len() + MAX_REPLAYED_OSC_BYTES]
+-    );
+-
+-    input.push(b'\x07');
+-    input.extend_from_slice(b"suffix");
+-    assert_eq!(startup_replay_input(&input), b"typedsuffix");
+-    assert_eq!(
+-        startup_replay_input(b"typed\x1b]10;partial\x1b"),
+-        b"typed\x1b]10;partial\x1b"
+-    );
+-}
+-
+-#[test]
+-fn startup_replay_preserves_osc_looking_bracketed_paste() {
+-    let mut input = b"prefix\x1b[200~\x1b]10;".to_vec();
+-    input.extend(std::iter::repeat_n(b'x', 2_048));
+-    input.extend_from_slice(b"\x1b[201~suffix");
+-
+-    assert_eq!(startup_replay_input(&input), input);
+-}
+-
+-#[test]
+-fn startup_replay_omits_terminal_color_replies_interleaved_with_bracketed_paste() {
+-    let input = b"prefix\x1b[200~hello\x1b]10;rgb:eeee/eeee/eeee\x07 \
+-        \x1b]11;rgb:1111/1111/1111\x1b\\world\x1b[201~suffix";
+-
+-    assert_eq!(
+-        startup_replay_input(input),
+-        b"prefix\x1b[200~hello world\x1b[201~suffix"
+-    );
+-
+-    let unfinished_paste = b"\x1b[200~hello\x1b]10;rgb:eeee/eeee/eeee\x07 world";
+-    assert_eq!(
+-        startup_replay_input(unfinished_paste),
+-        b"\x1b[200~hello world"
+-    );
+-
+-    let unrelated_osc = b"\x1b[200~\x1b]52;preserve me\x07\x1b[201~";
+-    assert_eq!(startup_replay_input(unrelated_osc), unrelated_osc);
+-
+-    let response_after_paste = b"\x1b[200~\x1b]10;unfinished\x1b[201~suffix\x07";
+-    assert_eq!(
+-        startup_replay_input(response_after_paste),
+-        response_after_paste
+-    );
+-}
+diff --git a/codex-rs/tui/src/tui.rs b/codex-rs/tui/src/tui.rs
+index 623a994..47e80bb 100644
+--- a/codex-rs/tui/src/tui.rs
++++ b/codex-rs/tui/src/tui.rs
+@@ -43,8 +43,6 @@ use tokio_stream::Stream;
+ pub use self::frame_requester::FrameRequester;
+ use self::input_boundary::TerminalInitializationGuard;
+ pub(crate) use self::input_boundary::discard_pending_terminal_input;
+-#[cfg(all(test, unix))]
+-use self::input_boundary::terminal_input_is_readable;
+ use crate::custom_terminal;
+ use crate::custom_terminal::Terminal as CustomTerminal;
+ use crate::insert_history::HistoryLineWrapPolicy;
+@@ -71,9 +69,6 @@ mod job_control;
+ mod keyboard_modes;
+ mod screen_size;
+ mod scrollback;
+-#[cfg(all(test, unix))]
+-#[path = "tui_startup_tests.rs"]
+-mod startup_tests;
+ mod terminal_stderr;
+ #[cfg(test)]
+ pub(crate) mod test_support;
+diff --git a/codex-rs/tui/src/tui/input_boundary.rs b/codex-rs/tui/src/tui/input_boundary.rs
+index 8930959..83257ec 100644
+--- a/codex-rs/tui/src/tui/input_boundary.rs
++++ b/codex-rs/tui/src/tui/input_boundary.rs
+@@ -24,11 +24,9 @@ impl Drop for TerminalInitializationGuard {
+ 
+ /// Drain decoded and unread input before a screen can accept a security-sensitive decision.
+ ///
+-/// Partial control sequences remain quarantined; an unresolved boundary fails after one second.
++/// The crates.io crossterm release has no buffered-input quarantine API, so a partial control
++/// sequence cannot be held back here; an unresolved boundary still fails after one second.
+ pub(crate) fn discard_pending_terminal_input() -> Result<()> {
+-    #[cfg(unix)]
+-    let _ = crossterm::event::discard_buffered_input()?;
+-
+     let deadline = Instant::now() + Duration::from_secs(/*secs*/ 1);
+     loop {
+         let remaining = deadline.saturating_duration_since(Instant::now());
+@@ -44,13 +42,6 @@ pub(crate) fn discard_pending_terminal_input() -> Result<()> {
+             continue;
+         }
+ 
+-        #[cfg(unix)]
+-        if crossterm::event::discard_buffered_input()?
+-            != crossterm::event::InputDiscardStatus::Complete
+-        {
+-            continue;
+-        }
+-
+         #[cfg(any(unix, windows))]
+         match terminal_input_is_readable() {
+             Ok(true) => continue,
+diff --git a/codex-rs/tui/src/tui_startup_tests.rs b/codex-rs/tui/src/tui_startup_tests.rs
+deleted file mode 100644
+index 19e1d33..0000000
+--- a/codex-rs/tui/src/tui_startup_tests.rs
++++ /dev/null
+@@ -1,394 +0,0 @@
+-use std::fs::File;
+-use std::io::Read as _;
+-use std::io::Write as _;
+-use std::os::fd::FromRawFd;
+-use std::path::Path;
+-use std::path::PathBuf;
+-use std::process::Command;
+-use std::process::Stdio;
+-use std::time::Duration;
+-use std::time::Instant;
+-
+-use crossterm::event::Event;
+-use crossterm::event::KeyCode;
+-
+-const STARTUP_INPUT_CHILD_TEST: &str = "tui::startup_tests::startup_typeahead_pty_child";
+-
+-#[test]
+-fn startup_preserves_typeahead_and_discards_buffered_action_key_after_first_draw() {
+-    let mut master = -1;
+-    let mut slave = -1;
+-    let mut size = libc::winsize {
+-        ws_row: 24,
+-        ws_col: 80,
+-        ws_xpixel: 0,
+-        ws_ypixel: 0,
+-    };
+-    // Safety: `openpty` initializes the two file descriptors and reads the supplied size.
+-    assert_eq!(
+-        unsafe {
+-            libc::openpty(
+-                &mut master,
+-                &mut slave,
+-                std::ptr::null_mut(),
+-                std::ptr::null_mut(),
+-                std::ptr::addr_of_mut!(size),
+-            )
+-        },
+-        0,
+-        "failed to create a test pty: {}",
+-        std::io::Error::last_os_error()
+-    );
+-    // Safety: `openpty` returned owned descriptors on success.
+-    let mut master = unsafe { File::from_raw_fd(master) };
+-    // Safety: `openpty` returned owned descriptors on success.
+-    let slave = unsafe { File::from_raw_fd(slave) };
+-
+-    // Queue canonical-mode typeahead before raw mode. Reinserting the old startup `tcflush`
+-    // drops this input before the bounded probe can preserve it.
+-    master
+-        .write_all(b"helo\x7Flo\x04")
+-        .expect("queue typeahead");
+-
+-    let signals = tempfile::tempdir().expect("create pty synchronization directory");
+-    let draft_ready = signals.path().join("draft-ready");
+-    let draft_queued = signals.path().join("draft-queued");
+-    let handoff_ready = signals.path().join("handoff-ready");
+-    let handoff_queued = signals.path().join("handoff-queued");
+-    let action_ready = signals.path().join("action-ready");
+-    let action_queued = signals.path().join("action-queued");
+-    let fresh_ready = signals.path().join("fresh-ready");
+-    let fresh_queued = signals.path().join("fresh-queued");
+-    let boundary_ready = signals.path().join("boundary-ready");
+-    let boundary_queued = signals.path().join("boundary-queued");
+-    let boundary_consumed = signals.path().join("boundary-consumed");
+-    let boundary_action_queued = signals.path().join("boundary-action-queued");
+-    let control_ready = signals.path().join("control-ready");
+-    let control_queued = signals.path().join("control-queued");
+-    let mut child = Command::new(std::env::current_exe().expect("current test binary"))
+-        .arg("--exact")
+-        .arg(STARTUP_INPUT_CHILD_TEST)
+-        .arg("--ignored")
+-        .arg("--nocapture")
+-        .env("CODEX_TUI_STARTUP_INPUT_PTY_DIR", signals.path())
+-        .stdin(Stdio::from(slave.try_clone().expect("clone pty slave")))
+-        .stdout(Stdio::from(slave))
+-        .stderr(Stdio::piped())
+-        .spawn()
+-        .expect("spawn startup input pty child");
+-    let mut output = master.try_clone().expect("clone pty output reader");
+-    let output_reader = std::thread::spawn(move || {
+-        let mut captured = Vec::new();
+-        let mut buffer = [0; 4096];
+-        loop {
+-            match output.read(&mut buffer) {
+-                Ok(0) => break,
+-                Ok(read) => captured.extend_from_slice(&buffer[..read]),
+-                Err(err) if err.kind() == std::io::ErrorKind::Interrupted => {}
+-                Err(_) => break,
+-            }
+-        }
+-        captured
+-    });
+-
+-    let result = (|| -> Result<(), String> {
+-        wait_for_file(&draft_ready)?;
+-        master
+-            .write_all(b"abc\r\x1b[DZ")
+-            .map_err(|err| format!("failed to queue editable startup input: {err}"))?;
+-        std::fs::write(&draft_queued, [])
+-            .map_err(|err| format!("failed to signal editable startup input: {err}"))?;
+-
+-        wait_for_file(&handoff_ready)?;
+-        master
+-            .write_all(b"!\x1b[D")
+-            .map_err(|err| format!("failed to queue post-handoff startup input: {err}"))?;
+-        std::fs::write(&handoff_queued, [])
+-            .map_err(|err| format!("failed to signal post-handoff startup input: {err}"))?;
+-
+-        for suffix in ["y", "1"] {
+-            let ready = signals.path().join(format!("alt-{suffix}-ready"));
+-            wait_for_file(&ready)?;
+-            std::thread::sleep(Duration::from_millis(/*millis*/ 60));
+-            master
+-                .write_all(suffix.as_bytes())
+-                .map_err(|err| format!("failed to queue delayed modifier suffix: {err}"))?;
+-            std::fs::write(signals.path().join(format!("alt-{suffix}-queued")), [])
+-                .map_err(|err| format!("failed to signal delayed modifier suffix: {err}"))?;
+-        }
+-
+-        wait_for_file(&action_ready)?;
+-        master
+-            .write_all(b"y")
+-            .map_err(|err| format!("failed to queue buffered action key: {err}"))?;
+-        std::fs::write(&action_queued, [])
+-            .map_err(|err| format!("failed to signal buffered action key: {err}"))?;
+-        std::thread::sleep(Duration::from_millis(/*millis*/ 30));
+-        master
+-            .write_all(b"1y\r\x1b[201~1\r")
+-            .map_err(|err| format!("failed to queue delayed bracketed-paste suffix: {err}"))?;
+-        wait_for_file(&fresh_ready)?;
+-        master
+-            .write_all(b"n")
+-            .map_err(|err| format!("failed to queue fresh key: {err}"))?;
+-        std::fs::write(&fresh_queued, [])
+-            .map_err(|err| format!("failed to signal fresh key: {err}"))?;
+-
+-        wait_for_file(&boundary_ready)?;
+-        master
+-            .write_all(b"\x1b[201~\x1b[12;3R")
+-            .map_err(|err| format!("failed to queue completed paste boundary: {err}"))?;
+-        std::fs::write(&boundary_queued, [])
+-            .map_err(|err| format!("failed to signal queued paste boundary: {err}"))?;
+-        wait_for_file(&boundary_consumed)?;
+-        master
+-            .write_all(b"1\r")
+-            .map_err(|err| format!("failed to queue unread action after paste boundary: {err}"))?;
+-        std::fs::write(&boundary_action_queued, [])
+-            .map_err(|err| format!("failed to signal queued unread action: {err}"))?;
+-
+-        wait_for_file(&control_ready)?;
+-        master
+-            .write_all(b"1y\r\x1b")
+-            .map_err(|err| format!("failed to queue delayed control-sequence payload: {err}"))?;
+-        std::fs::write(&control_queued, [])
+-            .map_err(|err| format!("failed to signal queued control-sequence payload: {err}"))?;
+-        std::thread::sleep(Duration::from_millis(/*millis*/ 30));
+-        master
+-            .write_all(b"\\")
+-            .map_err(|err| format!("failed to terminate the delayed control sequence: {err}"))?;
+-
+-        let started_at = Instant::now();
+-        while child
+-            .try_wait()
+-            .map_err(|err| format!("failed to poll startup input pty child: {err}"))?
+-            .is_none()
+-        {
+-            if started_at.elapsed() >= Duration::from_secs(/*secs*/ 5) {
+-                return Err("timed out waiting for startup input pty child".to_string());
+-            }
+-            std::thread::sleep(Duration::from_millis(/*millis*/ 10));
+-        }
+-        Ok(())
+-    })();
+-    if result.is_err() {
+-        let _ = child.kill();
+-    }
+-    let status = child.wait().expect("wait for startup input pty child");
+-    let output = output_reader.join().expect("join pty output reader");
+-    let mut stderr = String::new();
+-    child
+-        .stderr
+-        .take()
+-        .expect("child stderr")
+-        .read_to_string(&mut stderr)
+-        .expect("read child stderr");
+-    assert!(
+-        result.is_ok() && status.success(),
+-        "startup input pty child failed: {}\n{stderr}\n{}",
+-        result
+-            .err()
+-            .unwrap_or_else(|| "child exited unsuccessfully".to_string()),
+-        String::from_utf8_lossy(&output)
+-    );
+-}
+-
+-#[tokio::test(flavor = "current_thread")]
+-#[ignore]
+-async fn startup_typeahead_pty_child() {
+-    let Some(signals) = std::env::var_os("CODEX_TUI_STARTUP_INPUT_PTY_DIR") else {
+-        return;
+-    };
+-    let signals = PathBuf::from(signals);
+-    let mut startup_draft = crate::startup_draft::StartupDraft::new(
+-        crate::startup_draft::StartupDraftInitialScreen::Composer,
+-        crate::startup_draft::StartupDraftSessionAction::New,
+-    )
+-    .expect("initialize the real startup composer");
+-
+-    let mut typeahead = Vec::new();
+-    for _ in 0..5 {
+-        assert!(
+-            crossterm::event::poll(Duration::from_secs(/*secs*/ 1))
+-                .expect("poll startup typeahead"),
+-            "startup typeahead was lost"
+-        );
+-        match crossterm::event::read().expect("read startup typeahead") {
+-            Event::Key(key) => typeahead.push(key.code),
+-            event => panic!("unexpected startup event: {event:?}"),
+-        }
+-    }
+-    assert_eq!(
+-        typeahead,
+-        vec![
+-            KeyCode::Char('h'),
+-            KeyCode::Char('e'),
+-            KeyCode::Char('l'),
+-            KeyCode::Char('l'),
+-            KeyCode::Char('o'),
+-        ]
+-    );
+-    if crossterm::event::poll(Duration::ZERO).expect("poll the canonical-mode EOF") {
+-        // Canonical EOF does not have the same decoded representation on every Unix platform.
+-        crossterm::event::read().expect("read the canonical-mode EOF");
+-    }
+-    crossterm::event::buffer_input(b"\x1b").expect("buffer an incomplete escape sequence");
+-    crossterm::event::buffer_input(b"[A").expect("complete the buffered escape sequence");
+-    assert!(crossterm::event::poll(Duration::from_secs(/*secs*/ 1)).expect("poll split arrow"));
+-    assert!(matches!(
+-        crossterm::event::read().expect("read split arrow"),
+-        Event::Key(key) if key.code == KeyCode::Up
+-    ));
+-
+-    std::fs::write(signals.join("draft-ready"), []).expect("signal editable startup composer");
+-    let draft_queued = signals.join("draft-queued");
+-    let startup_result = startup_draft
+-        .run_until(async {
+-            while !draft_queued.exists() {
+-                tokio::time::sleep(Duration::from_millis(/*millis*/ 10)).await;
+-            }
+-            tokio::time::sleep(Duration::from_millis(/*millis*/ 100)).await;
+-            "startup completed"
+-        })
+-        .await
+-        .expect("edit the real composer while startup work is pending");
+-    assert_eq!(startup_result, "startup completed");
+-
+-    let (mut tui, mut terminal_restore_guard, mut startup_draft) = startup_draft.into_parts();
+-    std::fs::write(signals.join("handoff-ready"), []).expect("signal startup terminal handoff");
+-    let handoff_queued = signals.join("handoff-queued");
+-    startup_draft
+-        .run_until(&mut tui, async {
+-            while !handoff_queued.exists() {
+-                tokio::time::sleep(Duration::from_millis(/*millis*/ 10)).await;
+-            }
+-            tokio::time::sleep(Duration::from_millis(/*millis*/ 100)).await;
+-        })
+-        .await
+-        .expect("keep the real composer editable after terminal ownership transfers");
+-    startup_draft
+-        .flush_pending_events(&mut tui)
+-        .await
+-        .expect("flush real startup terminal input");
+-    tui.pause_events();
+-    let draft = startup_draft.into_draft();
+-    assert_eq!(
+-        draft.text, "abZ!c",
+-        "startup Enter must not submit the draft"
+-    );
+-    assert_eq!(draft.cursor, 3, "startup cursor edits must survive handoff");
+-    assert!(draft.local_images.is_empty());
+-
+-    tui.draw(u16::MAX, |_| {}).expect("draw actionable screen");
+-    crossterm::event::buffer_input(b"\x1b").expect("buffer a standalone escape");
+-    let escape_started_at = Instant::now();
+-    assert!(
+-        crossterm::event::poll(Duration::from_millis(/*millis*/ 250))
+-            .expect("poll the standalone escape")
+-    );
+-    assert!(matches!(
+-        crossterm::event::read().expect("read the standalone escape"),
+-        Event::Key(key) if key.code == KeyCode::Esc
+-    ));
+-    assert!(escape_started_at.elapsed() < Duration::from_millis(/*millis*/ 250));
+-
+-    for suffix in ["y", "1"] {
+-        crossterm::event::buffer_input(b"\x1b")
+-            .expect("buffer an incomplete modifier before the security screen");
+-        std::fs::write(signals.join(format!("alt-{suffix}-ready")), [])
+-            .expect("signal incomplete modifier");
+-        tui.discard_pending_input_before_interactive_screen()
+-            .expect("discard the delayed modifier suffix");
+-        wait_for_file(&signals.join(format!("alt-{suffix}-queued")))
+-            .expect("wait for the delayed modifier suffix");
+-        assert!(
+-            !crossterm::event::poll(Duration::from_millis(/*millis*/ 50))
+-                .expect("poll discarded modifier suffix"),
+-            "delayed modifier suffix became an unmodified action key"
+-        );
+-    }
+-
+-    crossterm::event::buffer_input(b"y\x1b[200~unfinished")
+-        .expect("buffer action key and incomplete bracketed paste before the security screen");
+-    std::fs::write(signals.join("action-ready"), []).expect("signal actionable screen");
+-    wait_for_file(&signals.join("action-queued")).expect("wait for the buffered action key");
+-    tui.discard_pending_input_before_interactive_screen()
+-        .expect("discard buffered action key");
+-    assert!(
+-        !crossterm::event::poll(Duration::from_millis(/*millis*/ 50))
+-            .expect("poll discarded action key"),
+-        "buffered action key was delivered after the first draw"
+-    );
+-
+-    std::fs::write(signals.join("fresh-ready"), []).expect("signal fresh input readiness");
+-    wait_for_file(&signals.join("fresh-queued")).expect("wait for the fresh input");
+-    assert!(crossterm::event::poll(Duration::from_secs(/*secs*/ 1)).expect("poll fresh key"));
+-    assert!(matches!(
+-        crossterm::event::read().expect("read fresh key"),
+-        Event::Key(key) if key.code == KeyCode::Char('n')
+-    ));
+-
+-    crossterm::event::buffer_input(b"\x1b[200~unfinished")
+-        .expect("buffer bracketed paste before an unread action boundary");
+-    assert_eq!(
+-        crossterm::event::discard_buffered_input().expect("quarantine unfinished paste"),
+-        crossterm::event::InputDiscardStatus::BracketedPasteInProgress
+-    );
+-    std::fs::write(signals.join("boundary-ready"), []).expect("signal paste-boundary readiness");
+-    wait_for_file(&signals.join("boundary-queued")).expect("wait for the paste boundary");
+-    assert!(
+-        !crossterm::event::poll(Duration::ZERO).expect("poll a completed paste with unread input")
+-    );
+-    assert_eq!(
+-        crossterm::event::discard_buffered_input().expect("discard completed paste boundary"),
+-        crossterm::event::InputDiscardStatus::Complete
+-    );
+-    std::fs::write(signals.join("boundary-consumed"), []).expect("signal completed paste boundary");
+-    wait_for_file(&signals.join("boundary-action-queued")).expect("wait for the unread action");
+-    assert!(super::terminal_input_is_readable().expect("check unread input after an elapsed poll"));
+-    tui.discard_pending_input_before_interactive_screen()
+-        .expect("discard actionable unread input after the paste boundary");
+-    assert!(
+-        !crossterm::event::poll(Duration::from_millis(/*millis*/ 50))
+-            .expect("poll discarded unread action"),
+-        "actionable input queued after the paste boundary survived the security drain"
+-    );
+-
+-    crossterm::event::buffer_input(b"\x1b]10;unfinished")
+-        .expect("buffer an unfinished control sequence before the security screen");
+-    assert_eq!(
+-        crossterm::event::discard_buffered_input().expect("quarantine unfinished control sequence"),
+-        crossterm::event::InputDiscardStatus::ControlSequenceInProgress
+-    );
+-    std::fs::write(signals.join("control-ready"), []).expect("signal control-sequence readiness");
+-    wait_for_file(&signals.join("control-queued")).expect("wait for the control sequence");
+-    tui.discard_pending_input_before_interactive_screen()
+-        .expect("discard delayed control-sequence payload");
+-    assert!(
+-        !crossterm::event::poll(Duration::from_millis(/*millis*/ 50))
+-            .expect("poll discarded control-sequence payload"),
+-        "control-sequence payload survived the security drain"
+-    );
+-
+-    crossterm::event::buffer_input(b"\x1b")
+-        .expect("buffer an ambiguous escape before the security screen");
+-    let err = tui
+-        .discard_pending_input_before_interactive_screen()
+-        .expect_err("an unresolved escape at a protected boundary must fail closed");
+-    assert_eq!(err.kind(), std::io::ErrorKind::TimedOut);
+-
+-    terminal_restore_guard
+-        .restore()
+-        .expect("restore terminal after startup draft handoff");
+-}
+-
+-fn wait_for_file(path: &Path) -> Result<(), String> {
+-    let started_at = Instant::now();
+-    while !path.exists() {
+-        if started_at.elapsed() >= Duration::from_secs(/*secs*/ 5) {
+-            return Err(format!("timed out waiting for {}", path.display()));
+-        }
+-        std::thread::sleep(Duration::from_millis(/*millis*/ 10));
+-    }
+-    Ok(())
+-}
+diff --git a/codex-rs/utils/absolute-path/Cargo.toml b/codex-rs/utils/absolute-path/Cargo.toml
+index 810b955..721d71d 100644
+--- a/codex-rs/utils/absolute-path/Cargo.toml
++++ b/codex-rs/utils/absolute-path/Cargo.toml
+@@ -27,4 +27,5 @@ serde_json = { workspace = true }
+ tempfile = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_absolute_path"
+ doctest = false
+diff --git a/codex-rs/utils/approval-presets/Cargo.toml b/codex-rs/utils/approval-presets/Cargo.toml
+index d60d2b3..04e9fd6 100644
+--- a/codex-rs/utils/approval-presets/Cargo.toml
++++ b/codex-rs/utils/approval-presets/Cargo.toml
+@@ -14,5 +14,6 @@ workspace = true
+ codex-protocol = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_approval_presets"
+ test = false
+ doctest = false
+diff --git a/codex-rs/utils/cache/Cargo.toml b/codex-rs/utils/cache/Cargo.toml
+index d8fc87c..acbebe5 100644
+--- a/codex-rs/utils/cache/Cargo.toml
++++ b/codex-rs/utils/cache/Cargo.toml
+@@ -19,4 +19,5 @@ tokio = { workspace = true, features = ["sync", "rt", "rt-multi-thread"] }
+ tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
+ 
+ [lib]
++name = "codex_utils_cache"
+ doctest = false
+diff --git a/codex-rs/utils/cargo-bin/BUILD.bazel b/codex-rs/utils/cargo-bin/BUILD.bazel
+index e4a96f5..5fd5dd3 100644
+--- a/codex-rs/utils/cargo-bin/BUILD.bazel
++++ b/codex-rs/utils/cargo-bin/BUILD.bazel
+@@ -8,6 +8,7 @@ exports_files(
+ codex_rust_crate(
+     name = "cargo-bin",
+     compile_data = ["repo_root.marker"],
++    crate_features = ["bazel"],
+     crate_name = "codex_utils_cargo_bin",
+     lib_data_extra = ["repo_root.marker"],
+     rustc_env = {
+diff --git a/codex-rs/utils/cargo-bin/Cargo.toml b/codex-rs/utils/cargo-bin/Cargo.toml
+index 5b5d3bf..f8bcee7 100644
+--- a/codex-rs/utils/cargo-bin/Cargo.toml
++++ b/codex-rs/utils/cargo-bin/Cargo.toml
+@@ -10,11 +10,16 @@ license.workspace = true
+ [lints]
+ workspace = true
+ 
++[features]
++default = []
++bazel = ["dep:runfiles"]
++
+ [dependencies]
+ assert_cmd = { workspace = true }
+-runfiles = { workspace = true }
++runfiles = { workspace = true, optional = true }
+ thiserror = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_cargo_bin"
+ test = false
+ doctest = false
+diff --git a/codex-rs/utils/cargo-bin/src/lib.rs b/codex-rs/utils/cargo-bin/src/lib.rs
+index 2cb25a6..dc820f6 100644
+--- a/codex-rs/utils/cargo-bin/src/lib.rs
++++ b/codex-rs/utils/cargo-bin/src/lib.rs
+@@ -3,6 +3,7 @@ use std::io;
+ use std::path::Path;
+ use std::path::PathBuf;
+ 
++#[cfg(feature = "bazel")]
+ pub use runfiles;
+ 
+ /// Bazel sets this when runfiles directories are disabled, which we do on all platforms for consistency.
+@@ -32,8 +33,8 @@ pub enum CargoBinError {
+ 
+ /// Returns an absolute path to a binary target built for the current test run.
+ ///
+-/// In `cargo test`, `CARGO_BIN_EXE_*` env vars are absolute.
+-/// In `bazel test`, `CARGO_BIN_EXE_*` env vars are rlocationpaths, intended to be consumed by `rlocation`.
++/// In cargo test, CARGO_BIN_EXE_* env vars are absolute.
++/// In bazel test, CARGO_BIN_EXE_* env vars are rlocationpaths, intended to be consumed by rlocation.
+ /// This helper allows callers to transparently support both.
+ #[allow(deprecated)]
+ pub fn cargo_bin(name: &str) -> Result<PathBuf, CargoBinError> {
+@@ -82,26 +83,15 @@ fn cargo_bin_env_keys(name: &str) -> Vec<String> {
+ }
+ 
+ pub fn runfiles_available() -> bool {
+-    std::env::var_os(RUNFILES_MANIFEST_ONLY_ENV).is_some()
++    cfg!(feature = "bazel") && std::env::var_os(RUNFILES_MANIFEST_ONLY_ENV).is_some()
+ }
+ 
+ fn resolve_bin_from_env(key: &str, value: OsString) -> Result<PathBuf, CargoBinError> {
+     let raw = PathBuf::from(&value);
+     if runfiles_available() {
+-        let runfiles = runfiles::Runfiles::create().map_err(|err| CargoBinError::CurrentExe {
+-            source: std::io::Error::other(err),
+-        })?;
+-        if let Some(mut resolved) = runfiles::rlocation!(runfiles, &raw) {
+-            if !resolved.is_absolute() {
+-                resolved = std::env::current_dir()
+-                    .map_err(|source| CargoBinError::CurrentDir { source })?
+-                    .join(resolved);
+-            }
+-            if resolved.exists() {
+-                return Ok(resolved);
+-            }
+-        }
+-    } else if raw.is_absolute() && raw.exists() {
++        return resolve_bazel_bin_from_env(key, raw);
++    }
++    if raw.is_absolute() && raw.exists() {
+         return Ok(raw);
+     }
+ 
+@@ -111,6 +101,36 @@ fn resolve_bin_from_env(key: &str, value: OsString) -> Result<PathBuf, CargoBinE
+     })
+ }
+ 
++#[cfg(feature = "bazel")]
++fn resolve_bazel_bin_from_env(key: &str, raw: PathBuf) -> Result<PathBuf, CargoBinError> {
++    let runfiles = runfiles::Runfiles::create().map_err(|err| CargoBinError::CurrentExe {
++        source: std::io::Error::other(err),
++    })?;
++    if let Some(mut resolved) = runfiles::rlocation!(runfiles, &raw) {
++        if !resolved.is_absolute() {
++            resolved = std::env::current_dir()
++                .map_err(|source| CargoBinError::CurrentDir { source })?
++                .join(resolved);
++        }
++        if resolved.exists() {
++            return Ok(resolved);
++        }
++    }
++
++    Err(CargoBinError::ResolvedPathDoesNotExist {
++        key: key.to_owned(),
++        path: raw,
++    })
++}
++
++#[cfg(not(feature = "bazel"))]
++fn resolve_bazel_bin_from_env(key: &str, raw: PathBuf) -> Result<PathBuf, CargoBinError> {
++    Err(CargoBinError::ResolvedPathDoesNotExist {
++        key: key.to_owned(),
++        path: raw,
++    })
++}
++
+ /// Macro that derives the path to a test resource at runtime, the value of
+ /// which depends on whether Cargo or Bazel is being used to build and run a
+ /// test. Note the return value may be a relative or absolute path.
+@@ -126,7 +146,7 @@ macro_rules! find_resource {
+         let resource = std::path::Path::new(&$resource);
+         if $crate::runfiles_available() {
+             // When this code is built and run with Bazel:
+-            // - we inject `BAZEL_PACKAGE` as a compile-time environment variable
++            // - we inject BAZEL_PACKAGE as a compile-time environment variable
+             //   that points to native.package_name()
+             // - at runtime, Bazel will set runfiles-related env vars
+             $crate::resolve_bazel_runfile(option_env!("BAZEL_PACKAGE"), resource)
+@@ -137,6 +157,7 @@ macro_rules! find_resource {
+     }};
+ }
+ 
++#[cfg(feature = "bazel")]
+ pub fn resolve_bazel_runfile(
+     bazel_package: Option<&str>,
+     resource: &Path,
+@@ -165,6 +186,17 @@ pub fn resolve_bazel_runfile(
+     ))
+ }
+ 
++#[cfg(not(feature = "bazel"))]
++pub fn resolve_bazel_runfile(
++    _bazel_package: Option<&str>,
++    _resource: &Path,
++) -> std::io::Result<PathBuf> {
++    Err(std::io::Error::new(
++        std::io::ErrorKind::Unsupported,
++        "Bazel runfiles support is disabled; enable the bazel feature",
++    ))
++}
++
+ pub fn resolve_cargo_runfile(resource: &Path) -> std::io::Result<PathBuf> {
+     let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+     Ok(manifest_dir.join(resource))
+@@ -172,22 +204,7 @@ pub fn resolve_cargo_runfile(resource: &Path) -> std::io::Result<PathBuf> {
+ 
+ pub fn repo_root() -> io::Result<PathBuf> {
+     let marker = if runfiles_available() {
+-        let runfiles = runfiles::Runfiles::create()
+-            .map_err(|err| io::Error::other(format!("failed to create runfiles: {err}")))?;
+-        let marker_path = option_env!("CODEX_REPO_ROOT_MARKER")
+-            .map(PathBuf::from)
+-            .ok_or_else(|| {
+-                io::Error::new(
+-                    io::ErrorKind::NotFound,
+-                    "CODEX_REPO_ROOT_MARKER was not set at compile time",
+-                )
+-            })?;
+-        runfiles::rlocation!(runfiles, &marker_path).ok_or_else(|| {
+-            io::Error::new(
+-                io::ErrorKind::NotFound,
+-                "repo_root.marker not available in runfiles",
+-            )
+-        })?
++        resolve_bazel_repo_root_marker()?
+     } else {
+         resolve_cargo_runfile(Path::new("repo_root.marker"))?
+     };
+@@ -206,6 +223,35 @@ pub fn repo_root() -> io::Result<PathBuf> {
+     Ok(root)
+ }
+ 
++#[cfg(feature = "bazel")]
++fn resolve_bazel_repo_root_marker() -> io::Result<PathBuf> {
++    let runfiles = runfiles::Runfiles::create()
++        .map_err(|err| io::Error::other(format!("failed to create runfiles: {err}")))?;
++    let marker_path = option_env!("CODEX_REPO_ROOT_MARKER")
++        .map(PathBuf::from)
++        .ok_or_else(|| {
++            io::Error::new(
++                io::ErrorKind::NotFound,
++                "CODEX_REPO_ROOT_MARKER was not set at compile time",
++            )
++        })?;
++    runfiles::rlocation!(runfiles, &marker_path).ok_or_else(|| {
++        io::Error::new(
++            io::ErrorKind::NotFound,
++            "repo_root.marker not available in runfiles",
++        )
++    })
++}
++
++#[cfg(not(feature = "bazel"))]
++fn resolve_bazel_repo_root_marker() -> io::Result<PathBuf> {
++    Err(io::Error::new(
++        io::ErrorKind::Unsupported,
++        "Bazel runfiles support is disabled; enable the bazel feature",
++    ))
++}
++
++#[cfg(feature = "bazel")]
+ fn normalize_runfile_path(path: &Path) -> PathBuf {
+     let mut components = Vec::new();
+     for component in path.components() {
+diff --git a/codex-rs/utils/cli/Cargo.toml b/codex-rs/utils/cli/Cargo.toml
+index 9287151..af199e4 100644
+--- a/codex-rs/utils/cli/Cargo.toml
++++ b/codex-rs/utils/cli/Cargo.toml
+@@ -21,4 +21,5 @@ toml = { workspace = true }
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_cli"
+ doctest = false
+diff --git a/codex-rs/utils/elapsed/Cargo.toml b/codex-rs/utils/elapsed/Cargo.toml
+index 939234d..37a564d 100644
+--- a/codex-rs/utils/elapsed/Cargo.toml
++++ b/codex-rs/utils/elapsed/Cargo.toml
+@@ -11,4 +11,5 @@ license.workspace = true
+ workspace = true
+ 
+ [lib]
++name = "codex_utils_elapsed"
+ doctest = false
+diff --git a/codex-rs/utils/fuzzy-match/Cargo.toml b/codex-rs/utils/fuzzy-match/Cargo.toml
+index 33a93bf..9112df7 100644
+--- a/codex-rs/utils/fuzzy-match/Cargo.toml
++++ b/codex-rs/utils/fuzzy-match/Cargo.toml
+@@ -11,4 +11,5 @@ license.workspace = true
+ workspace = true
+ 
+ [lib]
++name = "codex_utils_fuzzy_match"
+ doctest = false
+diff --git a/codex-rs/utils/home-dir/Cargo.toml b/codex-rs/utils/home-dir/Cargo.toml
+index 25ab41d..b327af0 100644
+--- a/codex-rs/utils/home-dir/Cargo.toml
++++ b/codex-rs/utils/home-dir/Cargo.toml
+@@ -19,4 +19,5 @@ pretty_assertions = { workspace = true }
+ tempfile = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_home_dir"
+ doctest = false
+diff --git a/codex-rs/utils/image/Cargo.toml b/codex-rs/utils/image/Cargo.toml
+index 4e283e5..0ab983f 100644
+--- a/codex-rs/utils/image/Cargo.toml
++++ b/codex-rs/utils/image/Cargo.toml
+@@ -23,6 +23,7 @@ divan = { workspace = true }
+ image = { workspace = true, features = ["jpeg", "png", "gif", "webp"] }
+ 
+ [lib]
++name = "codex_utils_image"
+ doctest = false
+ 
+ [[bench]]
+diff --git a/codex-rs/utils/json-to-toml/Cargo.toml b/codex-rs/utils/json-to-toml/Cargo.toml
+index ba5641f..4dcec50 100644
+--- a/codex-rs/utils/json-to-toml/Cargo.toml
++++ b/codex-rs/utils/json-to-toml/Cargo.toml
+@@ -18,4 +18,5 @@ pretty_assertions = { workspace = true }
+ workspace = true
+ 
+ [lib]
++name = "codex_utils_json_to_toml"
+ doctest = false
+diff --git a/codex-rs/utils/oss/Cargo.toml b/codex-rs/utils/oss/Cargo.toml
+index 2888d3c..6b21cc3 100644
+--- a/codex-rs/utils/oss/Cargo.toml
++++ b/codex-rs/utils/oss/Cargo.toml
+@@ -17,4 +17,5 @@ codex-model-provider-info = { workspace = true }
+ codex-ollama = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_oss"
+ doctest = false
+diff --git a/codex-rs/utils/output-truncation/Cargo.toml b/codex-rs/utils/output-truncation/Cargo.toml
+index 6f60ed2..b768d80 100644
+--- a/codex-rs/utils/output-truncation/Cargo.toml
++++ b/codex-rs/utils/output-truncation/Cargo.toml
+@@ -18,4 +18,5 @@ codex-utils-string = { workspace = true }
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_output_truncation"
+ doctest = false
+diff --git a/codex-rs/utils/path-utils/Cargo.toml b/codex-rs/utils/path-utils/Cargo.toml
+index 134d3b4..9c98d46 100644
+--- a/codex-rs/utils/path-utils/Cargo.toml
++++ b/codex-rs/utils/path-utils/Cargo.toml
+@@ -20,4 +20,5 @@ pretty_assertions = { workspace = true }
+ tempfile = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_path"
+ doctest = false
+diff --git a/codex-rs/utils/pty/Cargo.toml b/codex-rs/utils/pty/Cargo.toml
+index 9de887c..1fe0ec8 100644
+--- a/codex-rs/utils/pty/Cargo.toml
++++ b/codex-rs/utils/pty/Cargo.toml
+@@ -40,4 +40,5 @@ winapi = { version = "0.3.9", features = [
+ libc = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_pty"
+ doctest = false
+diff --git a/codex-rs/utils/readiness/Cargo.toml b/codex-rs/utils/readiness/Cargo.toml
+index 31d89e5..6d840f2 100644
+--- a/codex-rs/utils/readiness/Cargo.toml
++++ b/codex-rs/utils/readiness/Cargo.toml
+@@ -20,4 +20,5 @@ tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
+ workspace = true
+ 
+ [lib]
++name = "codex_utils_readiness"
+ doctest = false
+diff --git a/codex-rs/utils/rustls-provider/Cargo.toml b/codex-rs/utils/rustls-provider/Cargo.toml
+index c77f745..7e1900e 100644
+--- a/codex-rs/utils/rustls-provider/Cargo.toml
++++ b/codex-rs/utils/rustls-provider/Cargo.toml
+@@ -14,5 +14,6 @@ workspace = true
+ rustls = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_rustls_provider"
+ test = false
+ doctest = false
+diff --git a/codex-rs/utils/sandbox-summary/Cargo.toml b/codex-rs/utils/sandbox-summary/Cargo.toml
+index a1b152b..3fc19f5 100644
+--- a/codex-rs/utils/sandbox-summary/Cargo.toml
++++ b/codex-rs/utils/sandbox-summary/Cargo.toml
+@@ -19,4 +19,5 @@ codex-utils-absolute-path = { workspace = true }
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_sandbox_summary"
+ doctest = false
+diff --git a/codex-rs/utils/sleep-inhibitor/Cargo.toml b/codex-rs/utils/sleep-inhibitor/Cargo.toml
+index 3046868..098df1b 100644
+--- a/codex-rs/utils/sleep-inhibitor/Cargo.toml
++++ b/codex-rs/utils/sleep-inhibitor/Cargo.toml
+@@ -28,4 +28,5 @@ windows-sys = { version = "0.61.2", features = [
+ ] }
+ 
+ [lib]
++name = "codex_utils_sleep_inhibitor"
+ doctest = false
+diff --git a/codex-rs/utils/stream-parser/Cargo.toml b/codex-rs/utils/stream-parser/Cargo.toml
+index e6d4658..d6934c8 100644
+--- a/codex-rs/utils/stream-parser/Cargo.toml
++++ b/codex-rs/utils/stream-parser/Cargo.toml
+@@ -14,4 +14,5 @@ workspace = true
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_stream_parser"
+ doctest = false
+diff --git a/codex-rs/utils/string/Cargo.toml b/codex-rs/utils/string/Cargo.toml
+index 9e46713..2f3b86b 100644
+--- a/codex-rs/utils/string/Cargo.toml
++++ b/codex-rs/utils/string/Cargo.toml
+@@ -19,4 +19,5 @@ serde_json = { workspace = true }
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_string"
+ doctest = false
+diff --git a/codex-rs/utils/template/Cargo.toml b/codex-rs/utils/template/Cargo.toml
+index 343afae..f470d14 100644
+--- a/codex-rs/utils/template/Cargo.toml
++++ b/codex-rs/utils/template/Cargo.toml
+@@ -14,4 +14,5 @@ workspace = true
+ pretty_assertions = { workspace = true }
+ 
+ [lib]
++name = "codex_utils_template"
+ doctest = false
+diff --git a/codex-rs/websocket-client/Cargo.toml b/codex-rs/websocket-client/Cargo.toml
+index a01f3eb62a..6ec71ae14d 100644
+--- a/codex-rs/websocket-client/Cargo.toml
++++ b/codex-rs/websocket-client/Cargo.toml
+@@ -8,10 +8,11 @@ edition.workspace = true
+ license.workspace = true
+ 
+ [dependencies]
++base64 = { workspace = true }
+ codex-http-client = { workspace = true }
+ futures = { workspace = true }
+ rustls = { workspace = true }
+-tokio = { workspace = true, features = ["net", "rt", "time"] }
++tokio = { workspace = true, features = ["io-util", "net", "rt", "time"] }
+ tokio-rustls = { workspace = true }
+ tokio-tungstenite = { workspace = true }
+ url = { workspace = true }
+diff --git a/codex-rs/websocket-client/src/dialer.rs b/codex-rs/websocket-client/src/dialer.rs
+index 53d5b763b5..b7be4009ec 100644
+--- a/codex-rs/websocket-client/src/dialer.rs
++++ b/codex-rs/websocket-client/src/dialer.rs
+@@ -18,18 +18,21 @@ use tokio_rustls::TlsConnector;
+ use tokio_tungstenite::Connector;
+ use tokio_tungstenite::client_async_tls_with_config;
+ use tokio_tungstenite::connect_async_tls_with_config;
+-use tokio_tungstenite::proxy::connect_via_proxy;
+ use tokio_tungstenite::tungstenite::Error as WebSocketError;
+ use tokio_tungstenite::tungstenite::error::TlsError;
+ use tokio_tungstenite::tungstenite::error::UrlError;
+ use tokio_tungstenite::tungstenite::handshake::client::Request;
+ use tokio_tungstenite::tungstenite::handshake::client::Response;
+ use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
+-use tokio_tungstenite::tungstenite::proxy::ProxyConfig;
+ 
+ use crate::AsyncIo;
+ use crate::ConnectionInner;
+ use crate::TcpNodelay;
++use crate::proxy::ProxyConfig;
++use crate::proxy::connect_via_proxy;
++use crate::proxy::invalid_proxy_config;
++use crate::proxy::no_proxy_bypasses;
++use crate::proxy::proxy_config_from_env;
+ 
+ const HAPPY_EYEBALLS_DELAY: Duration = Duration::from_millis(250);
+ 
+@@ -43,8 +46,25 @@ pub(crate) async fn connect(
+     let disable_nagle = tcp_nodelay == TcpNodelay::Enabled;
+     let proxy_url = match proxy_route {
+         OutboundProxyRoute::TransportDefault => {
+-            // The workspace enables tokio-tungstenite's `proxy` feature, so its default dialer
+-            // resolves HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, and NO_PROXY before opening the socket.
++            // Mirror the forked tungstenite dialer: environment proxy variables
++            // (HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY) select a CONNECT/SOCKS5
++            // tunnel; without them the stock connect path handles the socket itself.
++            if let Some(proxy) = proxy_config_from_env(request.uri())? {
++                let host = websocket_host(&request)?;
++                let port = websocket_port(&request)?;
++                let stream = connect_tcp(proxy.authority(), tcp_nodelay)
++                    .await
++                    .map_err(WebSocketError::Io)?;
++                let stream = connect_via_proxy(stream, &proxy, host, port).await?;
++                let (stream, response) = client_async_tls_with_config(
++                    request,
++                    stream,
++                    Some(config),
++                    tls_config.map(Connector::Rustls),
++                )
++                .await?;
++                return Ok((ConnectionInner::TransportDefault(stream), response));
++            }
+             let (stream, response) = connect_async_tls_with_config(
+                 request,
+                 Some(config),
+@@ -55,30 +75,20 @@ pub(crate) async fn connect(
+             return Ok((ConnectionInner::TransportDefault(stream), response));
+         }
+         OutboundProxyRoute::Direct => None,
+-        OutboundProxyRoute::Proxy {
+-            url,
+-            no_proxy: None,
+-        } => Some(url),
+-        OutboundProxyRoute::Proxy {
+-            url,
+-            no_proxy: Some(_),
+-        } => {
+-            // Let Tungstenite apply its complete NO_PROXY semantics. Its environment parser does
+-            // not accept HTTPS proxy URLs, but that error occurs only after it decides the target
+-            // is not bypassed, so retry that case through the explicit TLS-to-proxy path below.
+-            match connect_async_tls_with_config(
+-                request.clone(),
+-                Some(config),
+-                disable_nagle,
+-                tls_config.clone().map(Connector::Rustls),
+-            )
+-            .await
+-            {
+-                Ok((stream, response)) => {
+-                    return Ok((ConnectionInner::TransportDefault(stream), response));
++        OutboundProxyRoute::Proxy { url, no_proxy } => {
++            // Apply the resolved NO_PROXY value at this layer: the upstream tungstenite
++            // fork made the same decision through its environment parser.
++            match no_proxy {
++                Some(no_proxy)
++                    if no_proxy_bypasses(
++                        websocket_host(&request)?,
++                        websocket_port(&request)?,
++                        &no_proxy,
++                    ) =>
++                {
++                    None
+                 }
+-                Err(WebSocketError::Url(UrlError::UnsupportedProxyScheme)) => Some(url),
+-                Err(error) => return Err(error),
++                _ => Some(url),
+             }
+         }
+     };
+@@ -138,33 +148,30 @@ struct ProxyEndpoint {
+ 
+ impl ProxyEndpoint {
+     fn parse(url: &str) -> Result<Self, WebSocketError> {
+-        let mut parsed_url = url::Url::parse(url).map_err(|_| invalid_proxy_config())?;
++        let mut parsed_url =
++            url::Url::parse(url).map_err(|_| invalid_proxy_config("<redacted>"))?;
+         let tls = parsed_url.scheme() == "https";
+         if tls {
+             // Capture the HTTPS default before changing schemes: `Url` normalizes default ports,
+             // so setting 443 before rewriting to HTTP would discard it and later imply port 80.
+             let port = parsed_url
+                 .port_or_known_default()
+-                .ok_or_else(invalid_proxy_config)?;
++                .ok_or_else(|| invalid_proxy_config("<redacted>"))?;
+             parsed_url
+                 .set_scheme("http")
+-                .map_err(|_| invalid_proxy_config())?;
++                .map_err(|_| invalid_proxy_config("<redacted>"))?;
+             parsed_url
+                 .set_port(Some(port))
+-                .map_err(|_| invalid_proxy_config())?;
++                .map_err(|_| invalid_proxy_config("<redacted>"))?;
+         }
+         let config = ProxyConfig::parse(parsed_url.as_str()).map_err(|error| match error {
+-            WebSocketError::Url(UrlError::UnsupportedProxyScheme) => error,
+-            _ => invalid_proxy_config(),
++            WebSocketError::Url(UrlError::UnsupportedUrlScheme) => error,
++            _ => invalid_proxy_config("<redacted>"),
+         })?;
+         Ok(Self { config, tls })
+     }
+ }
+ 
+-fn invalid_proxy_config() -> WebSocketError {
+-    WebSocketError::Url(UrlError::InvalidProxyConfig("<redacted>".to_string()))
+-}
+-
+ fn websocket_host(request: &Request) -> Result<&str, WebSocketError> {
+     request
+         .uri()
+diff --git a/codex-rs/websocket-client/src/dialer_tests.rs b/codex-rs/websocket-client/src/dialer_tests.rs
+index b8c3574305..cac40f5bf6 100644
+--- a/codex-rs/websocket-client/src/dialer_tests.rs
++++ b/codex-rs/websocket-client/src/dialer_tests.rs
+@@ -29,13 +29,13 @@ use tokio_tungstenite::accept_async;
+ use tokio_tungstenite::tungstenite::Message;
+ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+ use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
+-use tokio_tungstenite::tungstenite::proxy::ProxyScheme;
+ 
+ use super::*;
+ use crate::AsyncIo;
+ use crate::WebSocketConnection;
+ use crate::WebSocketConnector;
+ use crate::WebSocketTlsMode;
++use crate::proxy::ProxyScheme;
+ 
+ #[tokio::test]
+ async fn public_connector_uses_factory_and_exposes_stream_and_sink() {
+diff --git a/codex-rs/websocket-client/src/lib.rs b/codex-rs/websocket-client/src/lib.rs
+index cd6bdc2288..0c41087529 100644
+--- a/codex-rs/websocket-client/src/lib.rs
++++ b/codex-rs/websocket-client/src/lib.rs
+@@ -1,6 +1,7 @@
+ //! Proxy-aware WebSocket connection setup shared by Codex API clients.
+ 
+ mod dialer;
++mod proxy;
+ 
+ use std::pin::Pin;
+ use std::sync::Arc;
+diff --git a/codex-rs/websocket-client/src/proxy.rs b/codex-rs/websocket-client/src/proxy.rs
+new file mode 100644
+index 0000000000..7b20949ac0
+--- /dev/null
++++ b/codex-rs/websocket-client/src/proxy.rs
+@@ -0,0 +1,558 @@
++//! Proxy tunneling for WebSocket connections.
++//!
++//! This is a port of the `proxy` modules in the OpenAI `tokio-tungstenite`/`tungstenite`
++//! forks: crates.io releases do not publish them, so the CONNECT/SOCKS5 handshakes and
++//! `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY`/`NO_PROXY` resolution are reimplemented here.
++
++use std::env;
++use std::fmt;
++use std::io;
++
++use base64::Engine;
++use base64::engine::general_purpose::STANDARD as BASE64;
++use tokio::io::AsyncRead;
++use tokio::io::AsyncReadExt;
++use tokio::io::AsyncWrite;
++use tokio::io::AsyncWriteExt;
++use tokio_tungstenite::tungstenite::Error as WebSocketError;
++use tokio_tungstenite::tungstenite::error::UrlError;
++use tokio_tungstenite::tungstenite::http::Uri;
++
++const MAX_CONNECT_RESPONSE_SIZE: usize = 8192;
++
++/// Proxy scheme supported by the tunnel implementation.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) enum ProxyScheme {
++    /// HTTP CONNECT proxy.
++    Http,
++    /// SOCKS5 proxy with remote DNS resolution.
++    Socks5,
++    /// SOCKS5 proxy with local DNS resolution.
++    Socks5h,
++}
++
++/// Proxy authentication credentials.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub(crate) struct ProxyAuth {
++    /// Username for basic or SOCKS5 auth.
++    pub username: String,
++    /// Password for basic or SOCKS5 auth.
++    pub password: String,
++}
++
++/// Resolved proxy configuration.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub(crate) struct ProxyConfig {
++    /// Proxy scheme.
++    pub scheme: ProxyScheme,
++    /// Proxy host.
++    pub host: String,
++    /// Proxy port.
++    pub port: u16,
++    /// Proxy authentication credentials.
++    pub auth: Option<ProxyAuth>,
++}
++
++impl ProxyConfig {
++    /// Parse a proxy configuration from a proxy URL.
++    pub(crate) fn parse(value: &str) -> Result<Self, WebSocketError> {
++        parse_proxy_config(value)
++    }
++
++    /// Render the proxy authority as `host:port`.
++    pub(crate) fn authority(&self) -> String {
++        format!("{}:{}", self.host, self.port)
++    }
++}
++
++/// Resolve proxy configuration for a WebSocket URI using environment variables.
++///
++/// Honors `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, and `NO_PROXY` (case-insensitive),
++/// matching the forked tungstenite dialer.
++pub(crate) fn proxy_config_from_env(uri: &Uri) -> Result<Option<ProxyConfig>, WebSocketError> {
++    let tls = match uri.scheme_str() {
++        Some("ws") => false,
++        Some("wss") => true,
++        _ => return Err(WebSocketError::Url(UrlError::UnsupportedUrlScheme)),
++    };
++    let host = uri
++        .host()
++        .ok_or(WebSocketError::Url(UrlError::NoHostName))?;
++    let port = uri.port_u16().unwrap_or(if tls { 443 } else { 80 });
++
++    if no_proxy_env_bypasses(host, port) {
++        return Ok(None);
++    }
++
++    let proxy = match tls {
++        false => get_env_first(&["HTTP_PROXY", "http_proxy"]),
++        true => get_env_first(&["HTTPS_PROXY", "https_proxy"])
++            .or_else(|| get_env_first(&["HTTP_PROXY", "http_proxy"])),
++    }
++    .or_else(|| get_env_first(&["ALL_PROXY", "all_proxy"]));
++
++    let Some(proxy) = proxy else {
++        return Ok(None);
++    };
++
++    parse_proxy_config(&proxy).map(Some)
++}
++
++fn get_env_first(keys: &[&str]) -> Option<String> {
++    keys.iter()
++        .find_map(|key| env::var(key).ok())
++        .filter(|value| !value.is_empty())
++}
++
++fn no_proxy_env_bypasses(host: &str, port: u16) -> bool {
++    let Some(no_proxy) = get_env_first(&["NO_PROXY", "no_proxy"]) else {
++        return false;
++    };
++    no_proxy_bypasses(host, port, &no_proxy)
++}
++
++/// Whether a `NO_PROXY` value bypasses the given target.
++pub(crate) fn no_proxy_bypasses(host: &str, port: u16, no_proxy: &str) -> bool {
++    let host = normalize_host(host);
++    let no_proxy = no_proxy.trim();
++    if no_proxy.is_empty() {
++        return false;
++    }
++    if no_proxy == "*" {
++        return true;
++    }
++
++    for token in no_proxy.split(',') {
++        let token = token.trim();
++        if token.is_empty() {
++            continue;
++        }
++
++        let (token_host, token_port) = split_host_port(token);
++        if let Some(token_port) = token_port
++            && token_port != port
++        {
++            continue;
++        }
++
++        let token_host = normalize_host(token_host);
++
++        if host == token_host {
++            return true;
++        }
++
++        if let Some(suffix) = token_host.strip_prefix('.') {
++            if host == suffix || host.ends_with(&format!(".{suffix}")) {
++                return true;
++            }
++        } else if host.ends_with(&format!(".{token_host}")) {
++            return true;
++        }
++    }
++
++    false
++}
++
++fn split_host_port(token: &str) -> (&str, Option<u16>) {
++    let token = token.trim();
++    if let Some(remainder) = token.strip_prefix('[') {
++        if let Some(close) = remainder.find(']') {
++            let close = close + 1;
++            let host = &token[..=close];
++            let remainder = &token[close + 1..];
++            if let Some(port) = remainder.strip_prefix(':') {
++                return (host, port.parse().ok());
++            }
++            return (host, None);
++        }
++        return (token, None);
++    }
++
++    if token.matches(':').count() == 1
++        && let Some((host, port)) = token.rsplit_once(':')
++    {
++        return (host, port.parse().ok());
++    }
++
++    (token, None)
++}
++
++fn normalize_host(host: &str) -> &str {
++    host.strip_prefix('[')
++        .and_then(|h| h.strip_suffix(']'))
++        .unwrap_or(host)
++}
++
++fn parse_proxy_config(value: &str) -> Result<ProxyConfig, WebSocketError> {
++    let value = value.trim();
++    let uri: Uri = value.parse().map_err(|_| invalid_proxy_config(value))?;
++
++    let scheme = match uri.scheme_str() {
++        Some("http") => ProxyScheme::Http,
++        Some("socks5") => ProxyScheme::Socks5,
++        Some("socks5h") => ProxyScheme::Socks5h,
++        Some(_) | None => return Err(unsupported_proxy_scheme()),
++    };
++
++    let authority = uri
++        .authority()
++        .ok_or_else(|| invalid_proxy_config(value))?
++        .as_str();
++
++    let (userinfo, hostport) = split_userinfo(authority);
++    let (host, port) = parse_host_port(hostport, scheme)?;
++
++    let auth = userinfo.map(parse_userinfo).transpose()?;
++
++    Ok(ProxyConfig {
++        scheme,
++        host,
++        port,
++        auth,
++    })
++}
++
++fn split_userinfo(authority: &str) -> (Option<&str>, &str) {
++    let mut iter = authority.rsplitn(2, '@');
++    let hostport = iter.next().unwrap_or(authority);
++    let userinfo = iter.next();
++    (userinfo, hostport)
++}
++
++fn parse_host_port(hostport: &str, scheme: ProxyScheme) -> Result<(String, u16), WebSocketError> {
++    let uri: Uri = format!("http://{hostport}")
++        .parse()
++        .map_err(|_| invalid_proxy_config(hostport))?;
++
++    let host = uri
++        .host()
++        .ok_or_else(|| invalid_proxy_config(hostport))?
++        .to_string();
++
++    let port = uri.port_u16().unwrap_or(match scheme {
++        ProxyScheme::Http => 80,
++        ProxyScheme::Socks5 | ProxyScheme::Socks5h => 1080,
++    });
++
++    Ok((host, port))
++}
++
++fn parse_userinfo(userinfo: &str) -> Result<ProxyAuth, WebSocketError> {
++    let (user, pass) = userinfo.split_once(':').unwrap_or((userinfo, ""));
++    let username = percent_decode(user)?;
++    let password = percent_decode(pass)?;
++    Ok(ProxyAuth { username, password })
++}
++
++fn percent_decode(value: &str) -> Result<String, WebSocketError> {
++    let mut output = Vec::with_capacity(value.len());
++    let mut chars = value.as_bytes().iter().copied();
++    while let Some(byte) = chars.next() {
++        if byte == b'%' {
++            let hi = chars.next().ok_or_else(|| invalid_proxy_config(value))?;
++            let lo = chars.next().ok_or_else(|| invalid_proxy_config(value))?;
++            let decoded = (from_hex(hi)? << 4) | from_hex(lo)?;
++            output.push(decoded);
++        } else {
++            output.push(byte);
++        }
++    }
++    String::from_utf8(output).map_err(|_| invalid_proxy_config(value))
++}
++
++fn from_hex(byte: u8) -> Result<u8, WebSocketError> {
++    match byte {
++        b'0'..=b'9' => Ok(byte - b'0'),
++        b'a'..=b'f' => Ok(byte - b'a' + 10),
++        b'A'..=b'F' => Ok(byte - b'A' + 10),
++        _ => Err(invalid_proxy_config("invalid percent-encoding")),
++    }
++}
++
++/// Establish a proxy tunnel over an async stream before the WebSocket handshake.
++pub(crate) async fn connect_via_proxy<S>(
++    mut stream: S,
++    proxy: &ProxyConfig,
++    host: &str,
++    port: u16,
++) -> Result<S, WebSocketError>
++where
++    S: AsyncRead + AsyncWrite + Unpin,
++{
++    match proxy.scheme {
++        ProxyScheme::Http => {
++            http_connect(&mut stream, host, port, proxy.auth.as_ref()).await?;
++        }
++        ProxyScheme::Socks5 | ProxyScheme::Socks5h => {
++            socks5_handshake(&mut stream, host, port, proxy.auth.as_ref()).await?;
++        }
++    }
++
++    Ok(stream)
++}
++
++fn basic_auth_header(auth: &ProxyAuth) -> String {
++    let token = format!("{}:{}", auth.username, auth.password);
++    format!("Basic {}", BASE64.encode(token.as_bytes()))
++}
++
++async fn read_connect_response<S>(stream: &mut S) -> Result<Vec<u8>, WebSocketError>
++where
++    S: AsyncRead + Unpin,
++{
++    let mut buf = Vec::new();
++    let mut chunk = [0u8; 512];
++    loop {
++        if buf.len() >= MAX_CONNECT_RESPONSE_SIZE {
++            return Err(proxy_connect_failed("HTTP CONNECT response too large"));
++        }
++
++        let read = stream.read(&mut chunk).await.map_err(WebSocketError::Io)?;
++        if read == 0 {
++            break;
++        }
++        buf.extend_from_slice(&chunk[..read]);
++        if buf.windows(4).any(|window| window == b"\r\n\r\n") {
++            break;
++        }
++    }
++
++    Ok(buf)
++}
++
++/// Build the bytes for an HTTP CONNECT request.
++fn build_http_connect_request(authority: &str, auth: Option<&ProxyAuth>) -> Vec<u8> {
++    let mut request = Vec::new();
++    request.extend_from_slice(format!("CONNECT {authority} HTTP/1.1\r\n").as_bytes());
++    request.extend_from_slice(format!("Host: {authority}\r\n").as_bytes());
++    request.extend_from_slice(b"Proxy-Connection: Keep-Alive\r\n");
++    if let Some(auth) = auth {
++        let token = basic_auth_header(auth);
++        request.extend_from_slice(format!("Proxy-Authorization: {token}\r\n").as_bytes());
++    }
++    request.extend_from_slice(b"\r\n");
++    request
++}
++
++/// Parse an HTTP CONNECT response and return the status code.
++fn parse_http_connect_response(response: &[u8]) -> Result<u16, WebSocketError> {
++    let text = std::str::from_utf8(response)
++        .map_err(|_| proxy_connect_failed("HTTP CONNECT response not valid UTF-8"))?;
++
++    let mut lines = text.lines();
++    let status_line = lines
++        .next()
++        .ok_or_else(|| proxy_connect_failed("HTTP CONNECT response missing status line"))?;
++
++    let mut parts = status_line.split_whitespace();
++    let _version = parts.next();
++    let code = parts
++        .next()
++        .ok_or_else(|| proxy_connect_failed("HTTP CONNECT response missing status code"))?;
++    code.parse::<u16>()
++        .map_err(|_| proxy_connect_failed("HTTP CONNECT response invalid status code"))
++}
++
++async fn http_connect<S>(
++    stream: &mut S,
++    host: &str,
++    port: u16,
++    auth: Option<&ProxyAuth>,
++) -> Result<(), WebSocketError>
++where
++    S: AsyncRead + AsyncWrite + Unpin,
++{
++    let authority = format!("{host}:{port}");
++    let request = build_http_connect_request(&authority, auth);
++    stream
++        .write_all(&request)
++        .await
++        .map_err(WebSocketError::Io)?;
++    stream.flush().await.map_err(WebSocketError::Io)?;
++
++    let response = read_connect_response(stream).await?;
++    let status = parse_http_connect_response(&response)?;
++    if !(200..300).contains(&status) {
++        return Err(proxy_connect_failed(format!(
++            "HTTP CONNECT failed with status {status}"
++        )));
++    }
++    Ok(())
++}
++
++async fn socks5_handshake<S>(
++    stream: &mut S,
++    host: &str,
++    port: u16,
++    auth: Option<&ProxyAuth>,
++) -> Result<(), WebSocketError>
++where
++    S: AsyncRead + AsyncWrite + Unpin,
++{
++    let mut methods = vec![0x00];
++    if auth.is_some() {
++        methods.push(0x02);
++    }
++
++    stream
++        .write_all(&[0x05, methods.len() as u8])
++        .await
++        .map_err(WebSocketError::Io)?;
++    stream
++        .write_all(&methods)
++        .await
++        .map_err(WebSocketError::Io)?;
++    stream.flush().await.map_err(WebSocketError::Io)?;
++
++    let mut choice = [0u8; 2];
++    stream
++        .read_exact(&mut choice)
++        .await
++        .map_err(WebSocketError::Io)?;
++    if choice[0] != 0x05 {
++        return Err(proxy_connect_failed("SOCKS5: invalid response version"));
++    }
++
++    match choice[1] {
++        0x00 => {}
++        0x02 => {
++            let auth = auth.ok_or_else(|| {
++                proxy_connect_failed("SOCKS5: proxy requested auth, but none provided")
++            })?;
++            socks5_userpass_auth(stream, auth).await?;
++        }
++        0xFF => {
++            return Err(proxy_connect_failed(
++                "SOCKS5: no acceptable authentication method",
++            ));
++        }
++        _ => {
++            return Err(proxy_connect_failed(
++                "SOCKS5: unsupported authentication method",
++            ));
++        }
++    }
++
++    send_socks5_connect(stream, host, port).await?;
++    Ok(())
++}
++
++async fn socks5_userpass_auth<S>(stream: &mut S, auth: &ProxyAuth) -> Result<(), WebSocketError>
++where
++    S: AsyncRead + AsyncWrite + Unpin,
++{
++    let username = auth.username.as_bytes();
++    let password = auth.password.as_bytes();
++
++    if username.len() > u8::MAX as usize || password.len() > u8::MAX as usize {
++        return Err(proxy_connect_failed("SOCKS5 auth credentials too long"));
++    }
++
++    let mut buf = Vec::with_capacity(3 + username.len() + password.len());
++    buf.push(0x01);
++    buf.push(username.len() as u8);
++    buf.extend_from_slice(username);
++    buf.push(password.len() as u8);
++    buf.extend_from_slice(password);
++
++    stream.write_all(&buf).await.map_err(WebSocketError::Io)?;
++    stream.flush().await.map_err(WebSocketError::Io)?;
++
++    let mut response = [0u8; 2];
++    stream
++        .read_exact(&mut response)
++        .await
++        .map_err(WebSocketError::Io)?;
++    if response[0] != 0x01 || response[1] != 0x00 {
++        return Err(proxy_connect_failed("SOCKS5 authentication failed"));
++    }
++
++    Ok(())
++}
++
++async fn send_socks5_connect<S>(stream: &mut S, host: &str, port: u16) -> Result<(), WebSocketError>
++where
++    S: AsyncRead + AsyncWrite + Unpin,
++{
++    let mut request = Vec::new();
++    request.push(0x05);
++    request.push(0x01);
++    request.push(0x00);
++
++    if let Ok(addr) = host.parse::<std::net::Ipv4Addr>() {
++        request.push(0x01);
++        request.extend_from_slice(&addr.octets());
++    } else if let Ok(addr) = host.parse::<std::net::Ipv6Addr>() {
++        request.push(0x04);
++        request.extend_from_slice(&addr.octets());
++    } else {
++        let host_bytes = host.as_bytes();
++        if host_bytes.len() > u8::MAX as usize {
++            return Err(proxy_connect_failed("SOCKS5 domain name too long"));
++        }
++        request.push(0x03);
++        request.push(host_bytes.len() as u8);
++        request.extend_from_slice(host_bytes);
++    }
++
++    request.extend_from_slice(&port.to_be_bytes());
++    stream
++        .write_all(&request)
++        .await
++        .map_err(WebSocketError::Io)?;
++    stream.flush().await.map_err(WebSocketError::Io)?;
++
++    let mut header = [0u8; 4];
++    stream
++        .read_exact(&mut header)
++        .await
++        .map_err(WebSocketError::Io)?;
++    if header[0] != 0x05 {
++        return Err(proxy_connect_failed("SOCKS5: invalid response version"));
++    }
++
++    if header[1] != 0x00 {
++        return Err(proxy_connect_failed(format!(
++            "SOCKS5: connection failed with code {}",
++            header[1]
++        )));
++    }
++
++    let addr_len = match header[3] {
++        0x01 => 4,
++        0x03 => {
++            let mut len = [0u8; 1];
++            stream
++                .read_exact(&mut len)
++                .await
++                .map_err(WebSocketError::Io)?;
++            len[0] as usize
++        }
++        0x04 => 16,
++        _ => return Err(proxy_connect_failed("SOCKS5: invalid address type")),
++    };
++
++    let mut discard = vec![0u8; addr_len + 2];
++    stream
++        .read_exact(&mut discard)
++        .await
++        .map_err(WebSocketError::Io)?;
++    Ok(())
++}
++
++pub(crate) fn unsupported_proxy_scheme() -> WebSocketError {
++    WebSocketError::Url(UrlError::UnsupportedUrlScheme)
++}
++
++pub(crate) fn invalid_proxy_config(detail: impl fmt::Display) -> WebSocketError {
++    WebSocketError::Io(io::Error::new(
++        io::ErrorKind::InvalidInput,
++        format!("invalid proxy configuration: {detail}"),
++    ))
++}
++
++fn proxy_connect_failed(message: impl fmt::Display) -> WebSocketError {
++    WebSocketError::Io(io::Error::other(format!(
++        "proxy connection failed: {message}"
++    )))
++}

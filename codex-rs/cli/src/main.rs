@@ -1,3 +1,6 @@
+// The crates.io dependency graph (replacing upstream's git forks and pinned
+// lockfile) produces deeper async type layouts; mirrors mcp-server/app-server.
+#![recursion_limit = "256"]
 use clap::Args;
 use clap::CommandFactory;
 use clap::Parser;

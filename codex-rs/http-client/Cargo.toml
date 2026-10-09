@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-http-client"
+name = "unofficial-codex-http-client"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-http-client)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [dependencies]
@@ -45,4 +48,5 @@ tempfile = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 [lib]
+name = "codex_http_client"
 doctest = false

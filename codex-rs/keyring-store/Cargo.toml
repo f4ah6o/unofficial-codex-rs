@@ -1,5 +1,8 @@
 [package]
-name = "codex-keyring-store"
+name = "unofficial-codex-keyring-store"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-keyring-store)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -24,5 +27,6 @@ keyring = { workspace = true, features = ["windows-native"] }
 keyring = { workspace = true, features = ["sync-secret-service"] }
 
 [lib]
+name = "codex_keyring_store"
 test = false
 doctest = false

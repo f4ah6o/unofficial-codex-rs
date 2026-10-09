@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-thread-store"
+name = "unofficial-codex-thread-store"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-thread-store)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]

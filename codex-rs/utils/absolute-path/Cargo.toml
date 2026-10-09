@@ -1,6 +1,9 @@
 
 [package]
-name = "codex-utils-absolute-path"
+name = "unofficial-codex-utils-absolute-path"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-utils-absolute-path)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -24,4 +27,5 @@ serde_json = { workspace = true }
 tempfile = { workspace = true }
 
 [lib]
+name = "codex_utils_absolute_path"
 doctest = false
