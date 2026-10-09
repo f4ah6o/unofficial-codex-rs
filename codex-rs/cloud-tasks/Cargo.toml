@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-cloud-tasks"
+name = "unofficial-codex-cloud-tasks"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-cloud-tasks)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]
@@ -22,7 +25,7 @@ codex-cloud-tasks-client = { workspace = true }
 codex-cloud-tasks-mock-client = { workspace = true }
 codex-core = { workspace = true }
 codex-git-utils = { workspace = true }
-codex-login = { path = "../login" }
+codex-login = { package = "unofficial-codex-login", path = "../login" , version = "2026.8.0"}
 codex-model-provider = { workspace = true }
 codex-tui = { workspace = true }
 codex-utils-cli = { workspace = true }

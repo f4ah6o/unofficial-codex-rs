@@ -8,6 +8,7 @@ exports_files(
 codex_rust_crate(
     name = "cargo-bin",
     compile_data = ["repo_root.marker"],
+    crate_features = ["bazel"],
     crate_name = "codex_utils_cargo_bin",
     lib_data_extra = ["repo_root.marker"],
     rustc_env = {

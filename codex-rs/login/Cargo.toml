@@ -1,5 +1,8 @@
 [package]
-name = "codex-login"
+name = "unofficial-codex-login"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-login)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -55,4 +58,5 @@ tracing-subscriber = { workspace = true }
 wiremock = { workspace = true }
 
 [lib]
+name = "codex_login"
 doctest = false

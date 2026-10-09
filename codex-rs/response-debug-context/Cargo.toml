@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-response-debug-context"
+name = "unofficial-codex-response-debug-context"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-response-debug-context)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]

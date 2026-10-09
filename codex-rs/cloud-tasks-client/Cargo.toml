@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-cloud-tasks-client"
+name = "unofficial-codex-cloud-tasks-client"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-cloud-tasks-client)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]

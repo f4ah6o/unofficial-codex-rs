@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-agent-extension"
+name = "unofficial-codex-agent-extension"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-agent-extension)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 
 [lib]

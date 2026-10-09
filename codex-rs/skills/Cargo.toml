@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "codex-skills"
+name = "unofficial-codex-skills"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-skills)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 build = "build.rs"
 

@@ -10,15 +10,6 @@ fn main() {
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR");
     println!("cargo:rerun-if-env-changed=CODEX_SKIP_BWRAP_BUILD");
 
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
-    let vendor_dir = manifest_dir.join("../vendor/bubblewrap");
-    for source in ["bubblewrap.c", "bind-mount.c", "network.c", "utils.c"] {
-        println!(
-            "cargo:rerun-if-changed={}",
-            vendor_dir.join(source).display()
-        );
-    }
-
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     if target_os != "linux" || env::var_os("CODEX_SKIP_BWRAP_BUILD").is_some() {
         return;
@@ -34,6 +25,7 @@ fn try_build_bwrap() -> Result<(), String> {
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").map_err(|err| err.to_string())?);
     let out_dir = PathBuf::from(env::var("OUT_DIR").map_err(|err| err.to_string())?);
     let src_dir = resolve_bwrap_source_dir(&manifest_dir)?;
+    println!("cargo:rerun-if-changed={}", src_dir.display());
     let libcap = pkg_config::Config::new()
         .cargo_metadata(false)
         .probe("libcap")
@@ -80,7 +72,8 @@ fn try_build_bwrap() -> Result<(), String> {
 ///
 /// Priority:
 /// 1. `CODEX_BWRAP_SOURCE_DIR` points at an existing bubblewrap checkout.
-/// 2. The vendored bubblewrap tree under `codex-rs/vendor/bubblewrap`.
+/// 2. The crate-local tree under `bwrap/vendor/bubblewrap` (included in archives).
+/// 3. The workspace tree under `codex-rs/vendor/bubblewrap`.
 fn resolve_bwrap_source_dir(manifest_dir: &Path) -> Result<PathBuf, String> {
     if let Ok(path) = env::var("CODEX_BWRAP_SOURCE_DIR") {
         let src_dir = PathBuf::from(path);
@@ -93,14 +86,17 @@ fn resolve_bwrap_source_dir(manifest_dir: &Path) -> Result<PathBuf, String> {
         ));
     }
 
-    let vendor_dir = manifest_dir.join("../vendor/bubblewrap");
-    if vendor_dir.exists() {
-        return Ok(vendor_dir);
+    let packaged_dir = manifest_dir.join("vendor/bubblewrap");
+    let workspace_dir = manifest_dir.join("../vendor/bubblewrap");
+    for vendor_dir in [&packaged_dir, &workspace_dir] {
+        if vendor_dir.is_dir() {
+            return Ok(vendor_dir.to_path_buf());
+        }
     }
 
     Err(format!(
-        "expected vendored bubblewrap at {}, but it was not found.\n\
-Set CODEX_BWRAP_SOURCE_DIR to an existing checkout or vendor bubblewrap under codex-rs/vendor.",
-        vendor_dir.display()
+        "expected vendored bubblewrap at {} or {}, but it was not found. Set CODEX_BWRAP_SOURCE_DIR to an existing checkout.",
+        packaged_dir.display(),
+        workspace_dir.display()
     ))
 }

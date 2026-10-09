@@ -1,5 +1,8 @@
 [package]
-name = "codex-app-server-protocol"
+name = "unofficial-codex-app-server-protocol"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-app-server-protocol)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

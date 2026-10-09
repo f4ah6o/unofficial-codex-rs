@@ -43,8 +43,6 @@ use tokio_stream::Stream;
 pub use self::frame_requester::FrameRequester;
 use self::input_boundary::TerminalInitializationGuard;
 pub(crate) use self::input_boundary::discard_pending_terminal_input;
-#[cfg(all(test, unix))]
-use self::input_boundary::terminal_input_is_readable;
 use crate::custom_terminal;
 use crate::custom_terminal::Terminal as CustomTerminal;
 use crate::insert_history::HistoryLineWrapPolicy;
@@ -71,9 +69,6 @@ mod job_control;
 mod keyboard_modes;
 mod screen_size;
 mod scrollback;
-#[cfg(all(test, unix))]
-#[path = "tui_startup_tests.rs"]
-mod startup_tests;
 mod terminal_stderr;
 #[cfg(test)]
 pub(crate) mod test_support;

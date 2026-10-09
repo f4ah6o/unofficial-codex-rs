@@ -3,6 +3,7 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+#[cfg(feature = "bazel")]
 pub use runfiles;
 
 /// Bazel sets this when runfiles directories are disabled, which we do on all platforms for consistency.
@@ -32,8 +33,8 @@ pub enum CargoBinError {
 
 /// Returns an absolute path to a binary target built for the current test run.
 ///
-/// In `cargo test`, `CARGO_BIN_EXE_*` env vars are absolute.
-/// In `bazel test`, `CARGO_BIN_EXE_*` env vars are rlocationpaths, intended to be consumed by `rlocation`.
+/// In cargo test, CARGO_BIN_EXE_* env vars are absolute.
+/// In bazel test, CARGO_BIN_EXE_* env vars are rlocationpaths, intended to be consumed by rlocation.
 /// This helper allows callers to transparently support both.
 #[allow(deprecated)]
 pub fn cargo_bin(name: &str) -> Result<PathBuf, CargoBinError> {
@@ -82,29 +83,48 @@ fn cargo_bin_env_keys(name: &str) -> Vec<String> {
 }
 
 pub fn runfiles_available() -> bool {
-    std::env::var_os(RUNFILES_MANIFEST_ONLY_ENV).is_some()
+    cfg!(feature = "bazel") && std::env::var_os(RUNFILES_MANIFEST_ONLY_ENV).is_some()
 }
 
 fn resolve_bin_from_env(key: &str, value: OsString) -> Result<PathBuf, CargoBinError> {
     let raw = PathBuf::from(&value);
     if runfiles_available() {
-        let runfiles = runfiles::Runfiles::create().map_err(|err| CargoBinError::CurrentExe {
-            source: std::io::Error::other(err),
-        })?;
-        if let Some(mut resolved) = runfiles::rlocation!(runfiles, &raw) {
-            if !resolved.is_absolute() {
-                resolved = std::env::current_dir()
-                    .map_err(|source| CargoBinError::CurrentDir { source })?
-                    .join(resolved);
-            }
-            if resolved.exists() {
-                return Ok(resolved);
-            }
-        }
-    } else if raw.is_absolute() && raw.exists() {
+        return resolve_bazel_bin_from_env(key, raw);
+    }
+    if raw.is_absolute() && raw.exists() {
         return Ok(raw);
     }
 
+    Err(CargoBinError::ResolvedPathDoesNotExist {
+        key: key.to_owned(),
+        path: raw,
+    })
+}
+
+#[cfg(feature = "bazel")]
+fn resolve_bazel_bin_from_env(key: &str, raw: PathBuf) -> Result<PathBuf, CargoBinError> {
+    let runfiles = runfiles::Runfiles::create().map_err(|err| CargoBinError::CurrentExe {
+        source: std::io::Error::other(err),
+    })?;
+    if let Some(mut resolved) = runfiles::rlocation!(runfiles, &raw) {
+        if !resolved.is_absolute() {
+            resolved = std::env::current_dir()
+                .map_err(|source| CargoBinError::CurrentDir { source })?
+                .join(resolved);
+        }
+        if resolved.exists() {
+            return Ok(resolved);
+        }
+    }
+
+    Err(CargoBinError::ResolvedPathDoesNotExist {
+        key: key.to_owned(),
+        path: raw,
+    })
+}
+
+#[cfg(not(feature = "bazel"))]
+fn resolve_bazel_bin_from_env(key: &str, raw: PathBuf) -> Result<PathBuf, CargoBinError> {
     Err(CargoBinError::ResolvedPathDoesNotExist {
         key: key.to_owned(),
         path: raw,
@@ -126,7 +146,7 @@ macro_rules! find_resource {
         let resource = std::path::Path::new(&$resource);
         if $crate::runfiles_available() {
             // When this code is built and run with Bazel:
-            // - we inject `BAZEL_PACKAGE` as a compile-time environment variable
+            // - we inject BAZEL_PACKAGE as a compile-time environment variable
             //   that points to native.package_name()
             // - at runtime, Bazel will set runfiles-related env vars
             $crate::resolve_bazel_runfile(option_env!("BAZEL_PACKAGE"), resource)
@@ -137,6 +157,7 @@ macro_rules! find_resource {
     }};
 }
 
+#[cfg(feature = "bazel")]
 pub fn resolve_bazel_runfile(
     bazel_package: Option<&str>,
     resource: &Path,
@@ -165,6 +186,17 @@ pub fn resolve_bazel_runfile(
     ))
 }
 
+#[cfg(not(feature = "bazel"))]
+pub fn resolve_bazel_runfile(
+    _bazel_package: Option<&str>,
+    _resource: &Path,
+) -> std::io::Result<PathBuf> {
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Unsupported,
+        "Bazel runfiles support is disabled; enable the bazel feature",
+    ))
+}
+
 pub fn resolve_cargo_runfile(resource: &Path) -> std::io::Result<PathBuf> {
     let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     Ok(manifest_dir.join(resource))
@@ -172,22 +204,7 @@ pub fn resolve_cargo_runfile(resource: &Path) -> std::io::Result<PathBuf> {
 
 pub fn repo_root() -> io::Result<PathBuf> {
     let marker = if runfiles_available() {
-        let runfiles = runfiles::Runfiles::create()
-            .map_err(|err| io::Error::other(format!("failed to create runfiles: {err}")))?;
-        let marker_path = option_env!("CODEX_REPO_ROOT_MARKER")
-            .map(PathBuf::from)
-            .ok_or_else(|| {
-                io::Error::new(
-                    io::ErrorKind::NotFound,
-                    "CODEX_REPO_ROOT_MARKER was not set at compile time",
-                )
-            })?;
-        runfiles::rlocation!(runfiles, &marker_path).ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::NotFound,
-                "repo_root.marker not available in runfiles",
-            )
-        })?
+        resolve_bazel_repo_root_marker()?
     } else {
         resolve_cargo_runfile(Path::new("repo_root.marker"))?
     };
@@ -206,6 +223,35 @@ pub fn repo_root() -> io::Result<PathBuf> {
     Ok(root)
 }
 
+#[cfg(feature = "bazel")]
+fn resolve_bazel_repo_root_marker() -> io::Result<PathBuf> {
+    let runfiles = runfiles::Runfiles::create()
+        .map_err(|err| io::Error::other(format!("failed to create runfiles: {err}")))?;
+    let marker_path = option_env!("CODEX_REPO_ROOT_MARKER")
+        .map(PathBuf::from)
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                "CODEX_REPO_ROOT_MARKER was not set at compile time",
+            )
+        })?;
+    runfiles::rlocation!(runfiles, &marker_path).ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            "repo_root.marker not available in runfiles",
+        )
+    })
+}
+
+#[cfg(not(feature = "bazel"))]
+fn resolve_bazel_repo_root_marker() -> io::Result<PathBuf> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "Bazel runfiles support is disabled; enable the bazel feature",
+    ))
+}
+
+#[cfg(feature = "bazel")]
 fn normalize_runfile_path(path: &Path) -> PathBuf {
     let mut components = Vec::new();
     for component in path.components() {

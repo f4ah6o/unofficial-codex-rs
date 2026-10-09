@@ -1,5 +1,8 @@
 [package]
-name = "codex-cli"
+name = "unofficial-codex-cli"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-cli)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -35,7 +38,7 @@ codex-arg0 = { workspace = true }
 codex-api = { workspace = true }
 codex-chatgpt = { workspace = true }
 codex-cloud-config = { workspace = true }
-codex-cloud-tasks = { path = "../cloud-tasks" }
+codex-cloud-tasks = { package = "unofficial-codex-cloud-tasks", path = "../cloud-tasks" , version = "2026.8.0"}
 codex-utils-cli = { workspace = true }
 codex-config = { workspace = true }
 codex-core = { workspace = true }
@@ -101,7 +104,7 @@ url = { workspace = true }
 which = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-codex_windows_sandbox = { package = "codex-windows-sandbox", path = "../windows-sandbox-rs" }
+codex_windows_sandbox = { package = "unofficial-codex-windows-sandbox", path = "../windows-sandbox-rs" , version = "2026.8.0"}
 windows-sys = { version = "0.52", features = [
     "Win32_Foundation",
     "Win32_Storage_Packaging_Appx",

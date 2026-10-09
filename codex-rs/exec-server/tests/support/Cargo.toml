@@ -1,5 +1,8 @@
 [package]
-name = "codex-exec-server-test-support"
+name = "unofficial-codex-exec-server-test-support"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-exec-server-test-support)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true

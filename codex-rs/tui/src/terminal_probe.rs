@@ -14,7 +14,6 @@
 use std::time::Duration;
 
 #[cfg(unix)]
-mod startup_replay;
 
 /// Default wall-clock budget for each startup probe group.
 pub(crate) const DEFAULT_TIMEOUT: Duration = Duration::from_millis(100);
@@ -33,7 +32,6 @@ pub(crate) struct DefaultColors {
 mod imp {
     use super::DefaultColors;
     use super::parse_default_colors;
-    use super::startup_replay::startup_replay_input;
     use std::fs::File;
     use std::fs::OpenOptions;
     use std::io;
@@ -280,9 +278,9 @@ mod imp {
         }
 
         let mut buffer = Vec::new();
-        let result = read_startup_probe(&mut tty, timeout, keyboard_probe, &mut buffer);
-        crossterm::event::buffer_input(&startup_replay_input(&buffer))?;
-        result
+        // The crates.io crossterm release cannot push consumed bytes back into its event
+        // buffer, so unrelated input read during the probe window is discarded here.
+        read_startup_probe(&mut tty, timeout, keyboard_probe, &mut buffer)
     }
 
     /// Reads available terminal bytes until `parse` recognizes a probe response or time expires.
@@ -683,9 +681,6 @@ mod imp {
                     keyboard_enhancement_supported: Some(true),
                 }
             );
-            let mut expected_replay = vec![b'x'; 2_048];
-            expected_replay.extend_from_slice(b"\x1B[20;10R\x1B[?64;1;2c\x1B[?7u");
-            assert_eq!(startup_replay_input(&buffer), expected_replay);
         }
 
         #[test]

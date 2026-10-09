@@ -24,11 +24,9 @@ impl Drop for TerminalInitializationGuard {
 
 /// Drain decoded and unread input before a screen can accept a security-sensitive decision.
 ///
-/// Partial control sequences remain quarantined; an unresolved boundary fails after one second.
+/// The crates.io crossterm release has no buffered-input quarantine API, so a partial control
+/// sequence cannot be held back here; an unresolved boundary still fails after one second.
 pub(crate) fn discard_pending_terminal_input() -> Result<()> {
-    #[cfg(unix)]
-    let _ = crossterm::event::discard_buffered_input()?;
-
     let deadline = Instant::now() + Duration::from_secs(/*secs*/ 1);
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
@@ -41,13 +39,6 @@ pub(crate) fn discard_pending_terminal_input() -> Result<()> {
 
         if crossterm::event::poll(remaining.min(Duration::from_millis(/*millis*/ 10)))? {
             let _ = crossterm::event::read()?;
-            continue;
-        }
-
-        #[cfg(unix)]
-        if crossterm::event::discard_buffered_input()?
-            != crossterm::event::InputDiscardStatus::Complete
-        {
             continue;
         }
 

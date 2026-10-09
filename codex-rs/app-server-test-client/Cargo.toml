@@ -1,5 +1,8 @@
 [package]
-name = "codex-app-server-test-client"
+name = "unofficial-codex-app-server-test-client"
+description = "Unofficial downstream package of the OpenAI Codex Rust workspace (codex-app-server-test-client)."
+repository = "https://github.com/f4ah6o/unofficial-codex-rs"
+publish = true
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -25,6 +28,7 @@ url = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 
 [lib]
+name = "codex_app_server_test_client"
 doctest = false
 
 [dev-dependencies]
